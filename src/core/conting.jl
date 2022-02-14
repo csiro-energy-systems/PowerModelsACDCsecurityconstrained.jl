@@ -11,7 +11,7 @@
 Solves a SCOPF problem by iteratively checking for violated contingencies and 
 resolving until a fixed-point is reached
 """
-function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type::Type, optimizer; max_iter::Int=100, time_limit::Float64=Inf)
+function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type::Type, optimizer; max_iter::Int=100, time_limit::Float64=Inf)    #Update_GM
     if _IM.ismultinetwork(network)
         error(_LOGGER, "run_c1_scopf_contigency_cuts can only be used on single networks")
     end
@@ -27,9 +27,9 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     network_active["gen_contingencies"] = []
     network_active["branch_contingencies"] = []
 
-    multinetwork = build_c1_scopf_multinetwork(network_active)
-
-    result = run_c1_scopf_GM(multinetwork, model_type, optimizer)
+    multinetwork = _PMSC.build_c1_scopf_multinetwork(network_active)
+    s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
+    result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = s)         #Update_GM
     if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
         error(_LOGGER, "base-case SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
     end
@@ -72,18 +72,18 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
         end
 
         if contingencies_found <= 0
-            info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")
+            _PMSC.info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")           #Update_GM
             break
         else
-            info(_LOGGER, "found $(contingencies_found) new contingencies with violations")
+            _PMSC.info(_LOGGER, "found $(contingencies_found) new contingencies with violations")           #Update_GM
         end
 
 
-        info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"]))")
+        _PMSC.info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"]))")   #Update_GM
 
         time_solve_start = time()
         multinetwork = _PMSC.build_c1_scopf_multinetwork(network_active)
-        result = run_c1_scopf_GM(multinetwork, model_type, optimizer)
+        result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = s)   #Update_GM
         if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
             warn(_LOGGER, "scopf solve failed with status $(result["termination_status"]), terminating fixed-point early")
             break
