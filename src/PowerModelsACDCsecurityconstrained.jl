@@ -13,6 +13,7 @@ module PowerModelsACDCsecurityconstrained
     const _IM = InfrastructureModels
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
+    const C1_PG_LOSS_TOL = 1e-6                      # Update_GM
 
     # Register the module level logger at runtime so that folks can access the logger via `getlogger(PowerModels)`
     # NOTE: If this line is not included then the precompiled `_PM._LOGGER` won't be registered at runtime.
@@ -20,5 +21,8 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/conting.jl")
     include("core/PF.jl")
+    include("core/conting_v.jl")
+    include("core/conting_c.jl")
+    include("core/CalVio.jl")
 
 end # module

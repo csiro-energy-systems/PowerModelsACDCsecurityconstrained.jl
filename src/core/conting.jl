@@ -23,9 +23,11 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
 
     gen_contingencies = network_base["gen_contingencies"]
     branch_contingencies = network_base["branch_contingencies"]
+    branchdc_contingencies = network_base["branchdc_contingencies"]      #Update_GM
 
     network_active["gen_contingencies"] = []
     network_active["branch_contingencies"] = []
+    network_active["branchdc_contingencies"] = []                        #Update_GM
 
     multinetwork = _PMSC.build_c1_scopf_multinetwork(network_active)
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
@@ -47,7 +49,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     while contingencies_found > 0
         time_start_iteration = time()
 
-        contingencies = _PMSC.check_c1_contingency_violations(network_base, contingency_limit=iteration)
+        contingencies = check_c1_contingency_violations_GM(network_base, contingency_limit=iteration)    #Update_GM
         #println(contingencies)
 
         contingencies_found = 0
@@ -71,6 +73,16 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
             end
         end
 
+        #append!(network_active["branchdc_contingencies"], contingencies.branchdc_contingencies)
+        for cont in contingencies.branchdc_contingencies                                                    #Update_GM
+            if cont in network_active["branchdc_contingencies"]                                             #Update_GM
+                warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")                #Update_GM
+            else
+                push!(network_active["branchdc_contingencies"], cont)                                       #Update_GM
+                contingencies_found += 1                                                                    #Update_GM
+            end
+        end
+
         if contingencies_found <= 0
             _PMSC.info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")           #Update_GM
             break
@@ -79,7 +91,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
         end
 
 
-        _PMSC.info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"]))")   #Update_GM
+        _PMSC.info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"])), branchdc $(length(network_active["branchdc_contingencies"]))")   #Update_GM
 
         time_solve_start = time()
         multinetwork = _PMSC.build_c1_scopf_multinetwork(network_active)
