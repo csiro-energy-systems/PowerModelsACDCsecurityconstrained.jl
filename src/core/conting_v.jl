@@ -1,6 +1,8 @@
 function check_c1_contingency_violations_GM(network;
-    gen_contingency_limit=10, branch_contingency_limit=10, branchdc_contingency_limit=10, contingency_limit=typemax(Int64),
+    gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01)     # Update_GM
+    s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            # Update_GM
+
 
 if _IM.ismultinetwork(network)
     error(_LOGGER, "the branch flow cut generator can only be used on single networks")
@@ -28,14 +30,14 @@ if p_losses > C1_PG_LOSS_TOL
     for (i,load) in load_active
         load["pd"] += p_delta
     end
-    warn(_LOGGER, "active power losses found $(p_losses) increasing loads by $(p_delta)")
+    _PMSC.warn(_LOGGER, "active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
 end
 
 
 
 gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
 branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
-branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)              # Update_GM
+branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
 
 gen_cuts = []
 for (i,cont) in enumerate(gen_contingencies)
@@ -67,7 +69,7 @@ for (i,cont) in enumerate(gen_contingencies)
 
     alpha_gens = [gen["alpha"] for (i,gen) in gen_active]
     if length(alpha_gens) == 0 || isapprox(sum(alpha_gens), 0.0)
-        warn(_LOGGER, "no available active power response in cont $(cont.label), active gens $(length(alpha_gens))")
+        _PMSC.warn(_LOGGER, "no available active power response in cont $(cont.label), active gens $(length(alpha_gens))")  # Update_GM
         continue
     end
 
@@ -81,10 +83,10 @@ for (i,cont) in enumerate(gen_contingencies)
     end
 
     try
-        solution = _PM.compute_dc_pf(network_lal)["solution"]
+        solution =   _PM.compute_dc_pf(network_lal)["solution"]        #_PMACDC.run_acdcpf( (network_lal)["solution"], DCPPowerModel, ipopt_solver; setting = s)       # Update_GM function acdcpf  
         _PM.update_data!(network_lal, solution)
     catch exception
-        warn(_LOGGER, "linear solve failed on $(cont.label)")
+        _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
         continue
     end
 
@@ -122,14 +124,14 @@ for (i,cont) in enumerate(branch_contingencies)
 
     cont_branch = network_lal["branch"]["$(cont.idx)"]
     cont_branch["br_status"] = 0
-
-    try
-        solution = _PM.compute_dc_pf(network_lal)["solution"]
+    #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
+   # try
+        solution =  _PMACDC.run_acdcpf( network_lal, DCPPowerModel, ipopt_solver; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
-    catch exception
-        warn(_LOGGER, "linear solve failed on $(cont.label)")
-        continue
-    end
+    #catch exception
+    #    _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
+    #    continue
+    #end
 
     flow = _PM.calc_branch_flow_dc(network_lal)
     _PM.update_data!(network_lal, flow)
@@ -150,7 +152,7 @@ end
 ########################################################################################################################################
 
 if p_delta != 0.0
-    warn(_LOGGER, "re-adjusting loads by $(-p_delta)")
+    _PMSC.warn(_LOGGER, "re-adjusting loads by $(-p_delta)")        # Update_GM
     for (i,load) in load_active
         load["pd"] -= p_delta
     end
@@ -174,10 +176,10 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     cont_branchdc["status"] = 0                                       # Update_GM
 
     try
-        solution = _PM.compute_dc_pf(network_lal)["solution"]               ########################################################### check
+        solution = _PM.compute_dc_pf(network_lal)["solution"]               # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
     catch exception
-        warn(_LOGGER, "linear solve failed on $(cont.label)")
+        _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
         continue
     end
 

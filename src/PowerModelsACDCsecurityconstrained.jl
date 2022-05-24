@@ -24,5 +24,6 @@ module PowerModelsACDCsecurityconstrained
     include("core/conting_v.jl")
     include("core/conting_c.jl")
     include("core/CalVio.jl")
+    include("core/build_scopf_multinetwork_GM.jl")
 
 end # module

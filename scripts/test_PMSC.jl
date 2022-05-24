@@ -1,7 +1,6 @@
 using Pkg
 Pkg.activate("./scripts")
 
-
 using Ipopt
 using Cbc
 using JuMP
@@ -13,7 +12,6 @@ using PowerModelsACDCsecurityconstrained
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
 #lp_solver = optimizer_with_attributes(Cbc.Optimizer)
-
 
 
 c1_ini_file = "./data/c1/inputfiles.ini"
@@ -39,10 +37,26 @@ c1_networks["convdc"]["2"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "f
 
 c1_networks["branchdc_contingencies"]=Vector{Any}(undef, 1)
 c1_networks["branchdc_contingencies"][1]=(idx = 1, label = "LINE-1-2-R", type = "branchdc")
-#[(idx = 1, label = "LINE-1-2-R", type = "branchdc") (idx = 2, label = "LINE-3-4-R", type = "branchdc")]
+c1_networks["branch_contingencies"]=Vector{Any}(undef, 11)
+c1_networks["branch_contingencies"][1]=(idx = 7, label = "LINE-4-5-BL", type = "branch")
+c1_networks["branch_contingencies"][2]=(idx = 9, label = "LINE-6-12-BL", type = "branch")
+c1_networks["branch_contingencies"][3]=(idx = 10, label = "LINE-6-13-BL", type = "branch")
+c1_networks["branch_contingencies"][4]=(idx = 6, label = "LINE-3-4-BL", type = "branch")
+c1_networks["branch_contingencies"][5]=(idx = 1, label = "LINE-1-2-BL", type = "branch")
+c1_networks["branch_contingencies"][6]=(idx = 2, label = "LINE-1-5-BL", type = "branch")
+c1_networks["branch_contingencies"][7]=(idx = 3, label = "LINE-2-3-BL", type = "branch")
+c1_networks["branch_contingencies"][8]=(idx = 4, label = "LINE-2-4-BL", type = "branch")
+c1_networks["branch_contingencies"][9]=(idx = 5, label = "LINE-2-5-BL", type = "branch")
+c1_networks["branch_contingencies"][10]=(idx = 8, label = "LINE-6-11-BL", type = "branch")
+c1_networks["branch_contingencies"][11]=(idx = 11, label = "LINE-7-8-BL", type = "branch")
+
+c1_networks["gen_contingencies"]=Vector{Any}(undef, 3)
+c1_networks["gen_contingencies"][1]=(idx = 3, label = "GEN-3-1", type = "gen")
+c1_networks["gen_contingencies"][2]=(idx = 1, label = "GEN-1-1", type = "gen")
+c1_networks["gen_contingencies"][3]=(idx = 2, label = "GEN-2-1", type = "gen")
 
 ##
-#c1_networks["busdc"]["3"]=Dict{String, Any}()
+#c1_networks["busdc"]["3"]=Dict{String, Any}()a
 #1_networks["busdc"]["4"]=Dict{String, Any}()
 #c1_networks["busdc"]["4"]=Dict("basekVdc" => 345, "source_id" => Any["busdc", 4], "Vdc" => 1, "busdc_i" => 4, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 4, "Pdc" => 0)
 #c1_networks["branchdc"]["2"]=Dict{String, Any}()
@@ -73,8 +87,6 @@ c1_networks["branchdc_contingencies"][1]=(idx = 1, label = "LINE-1-2-R", type = 
 # c1_networks["bus"]["16"]["index"]=16
 
 
-
-
 # data=parse_file("./data/case5_tnep.m")
 # dcline=data["dcline"]
 # c1_networks["dcline"]=copy(dcline)
@@ -95,8 +107,22 @@ c1_networks["branchdc_contingencies"][1]=(idx = 1, label = "LINE-1-2-R", type = 
 # c1_networks["convdc"]["2"]["index"]=2
 # c1_networks["convdc"]["2"]["source_id"][2]=2
 
-##
+    ##
 #PowerModelsACDC.process_additional_data!(c1_networks)
 #s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            settings=s
 
-resultACDCSCOPF=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.DCPPowerModel, lp_solver)
+#resultACDCSCOPF1=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.DCPPowerModel, lp_solver)
+resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.ACPPowerModel, nlp_solver)
+#resultACDCSCOPF3=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.ACRPowerModel, nlp_solver)   # Constraints required constraint_ohms_dc_branch(::ACRPowerModel, ::Int64, ...
+
+
+    ## IEEE14 bus network with four contingencies
+#c2_networks=parse_file("./data/case14.m")
+#c2_networks["gen_contingencies"]=Vector{Any}(undef, 1)
+#c2_networks["branch_contingencies"]=Vector{Any}(undef, 1)
+#c2_networks["gen_contingencies"][1]=(idx = 3, label = "GEN-3-1", type = "gen")
+#c2_networks["branch_contingencies"][1]=(idx = 9, label = "LINE-6-12-BL", type = "branch")
+#c2_networks["branchdc_contingencies"]=Vector{Any}(undef, 1)
+#c2_networks["branchdc_contingencies"][1]=(idx = 9, label = "LINE-6-12-R", type = "branchdc")
+    ##
+#resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c2_networks, PowerModels.DCPPowerModel, lp_solver)
