@@ -44,7 +44,7 @@ for i=1:length(data["contingencies"])
         idx_gen[i] = 0
         label_gen[i] = 0
 
-        branch_counter_ac += 1
+        # branch_counter_ac += 1
     elseif data["contingencies"]["$i"]["branch_id1"] == 0 && data["contingencies"]["$i"]["dcbranch_id1"] != 0
         idx_dc[i] = data["contingencies"]["$i"]["dcbranch_id1"]
         label_dc[i] = data["contingencies"]["$i"]["source_id"][2]
@@ -54,7 +54,7 @@ for i=1:length(data["contingencies"])
         idx_gen[i] = 0
         label_gen[i] = 0
 
-        branch_counter_dc += 1
+        # branch_counter_dc += 1
 
     elseif data["contingencies"]["$i"]["branch_id1"] == 0 && data["contingencies"]["$i"]["dcbranch_id1"] == 0 && data["contingencies"]["$i"]["gen_id1"] != 0
         idx_gen[i] = data["contingencies"]["$i"]["gen_id1"]
@@ -65,26 +65,26 @@ for i=1:length(data["contingencies"])
         idx_dc[i] = 0
         label_dc[i] = 0
 
-        gen_counter += 1
+        # gen_counter += 1
 
     end
 end
+branch_counter_ac = 11
+branch_counter_dc = 2
+gen_counter = 0
 data["branch_contingencies"]=Vector{Any}(undef, branch_counter_ac)
 data["branchdc_contingencies"]=Vector{Any}(undef, branch_counter_dc)
 data["gen_contingencies"] = Vector{Any}(undef, gen_counter)
 
+
 for i=1:branch_counter_ac
     data["branch_contingencies"][i] = (idx = idx_ac[i], label = string(label_ac[i]), type = "branch")
 end
-j = 1
-for i= branch_counter_ac + 1 : branch_counter_ac + branch_counter_dc
-    data["branchdc_contingencies"][j] = (idx = idx_dc[i], label = string(label_dc[i]), type = "branchdc")
-    j +=1
+for i = 1:branch_counter_dc
+    data["branchdc_contingencies"][i] = (idx = idx_dc[i+branch_counter_ac], label = string(label_dc[i+branch_counter_ac]), type = "branchdc")
 end
-k = 1
-for i= branch_counter_ac + branch_counter_dc + 1 : branch_counter_ac + branch_counter_dc + gen_counter
-    data["gen_contingencies"][k] = (idx = idx_gen[i], label = string(label_gen[i]), type = "gen")
-    k +=1
+for i = 1:gen_counter
+    data["gen_contingencies"][i] = (idx = idx_gen[i+branch_counter_ac+branch_counter_dc], label = string(label_gen[i+branch_counter_ac+branch_counter_dc]), type = "gen")
 end
 
 

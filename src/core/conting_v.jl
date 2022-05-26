@@ -1,4 +1,4 @@
-function check_c1_contingency_violations_GM(network;
+function check_c1_contingency_violations_GM(network, optimizer;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01)     # Update_GM
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            # Update_GM
@@ -126,7 +126,7 @@ for (i,cont) in enumerate(branch_contingencies)
     cont_branch["br_status"] = 0
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
    # try
-        solution =  _PMACDC.run_acdcpf( network_lal, DCPPowerModel, ipopt_solver; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution =  _PMACDC.run_acdcpf( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
     #catch exception
     #    _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
