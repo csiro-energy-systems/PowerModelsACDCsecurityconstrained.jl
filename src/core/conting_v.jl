@@ -1,7 +1,7 @@
 function check_c1_contingency_violations_GM(network, optimizer;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01)     # Update_GM
-    s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            # Update_GM
+    s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => false)            # Update_GM
 
 
 if _IM.ismultinetwork(network)
@@ -124,6 +124,7 @@ for (i,cont) in enumerate(branch_contingencies)
 
     cont_branch = network_lal["branch"]["$(cont.idx)"]
     cont_branch["br_status"] = 0
+    _PMACDC.process_additional_data!(network_lal)
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
    # try
         solution =  _PMACDC.run_acdcpf( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
