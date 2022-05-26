@@ -125,8 +125,8 @@ for (i,cont) in enumerate(branch_contingencies)
     cont_branch = network_lal["branch"]["$(cont.idx)"]
     cont_branch["br_status"] = 0
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
-   # try
-        solution =  _PMACDC.run_acdcpf( network_lal, DCPPowerModel, ipopt_solver; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+    #try
+        solution = _PMACDC.run_acdcpf( network_lal, _PMACDC.DCPPowerModel, ipopt_solver; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf  
         _PM.update_data!(network_lal, solution)
     #catch exception
     #    _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
