@@ -124,7 +124,7 @@ for (i,cont) in enumerate(branch_contingencies)
 
     cont_branch = network_lal["branch"]["$(cont.idx)"]
     cont_branch["br_status"] = 0
-    _PMACDC.process_additional_data!(network_lal)
+    _PMACDC.fix_data!(network_lal)
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
    # try
         solution =  _PMACDC.run_acdcpf( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf

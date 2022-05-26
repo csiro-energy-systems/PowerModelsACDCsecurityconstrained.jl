@@ -171,6 +171,7 @@ data["contingencies"] = []
 #s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            settings=s
 
 #resultACDCSCOPF1=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.DCPPowerModel, lp_solver)
+PowerModelsACDC.process_additional_data!(data)
 resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(data, PowerModels.ACPPowerModel, nlp_solver)
 
 

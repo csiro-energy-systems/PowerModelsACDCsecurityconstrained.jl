@@ -1,7 +1,7 @@
 ########################################################################################################################################################################
-function run_c1_scopf_GM(file, model_constructor, solver; kwargs...)                                         # Update_GM
-    _PMACDC.process_additional_data!(file)                                                                 # Update_GM
-    return _PM.run_model(file, model_constructor, solver, build_c1_scopf_GM; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)   # Update_GM
+function run_c1_scopf_GM(data, model_constructor, solver; kwargs...)                                         # Update_GM
+    # _PMACDC.process_additional_data!(data)                                                                 # Update_GM
+    return _PM.run_model(data, model_constructor, solver, build_c1_scopf_GM; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)   # Update_GM
 end
 
 
