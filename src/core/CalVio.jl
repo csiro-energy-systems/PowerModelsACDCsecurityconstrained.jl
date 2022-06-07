@@ -98,7 +98,7 @@ function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{Strin
 
                 # note true model is rateC
                 #vio_flag = false
-                rate_keydc=rate_keydc/100;                           # Update_GM 
+                #rate_keydc=rate_keydc/100;                           # Update_GM 
                 rating = branchdc[rate_keydc]
 
                 if s_fr > rating

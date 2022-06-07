@@ -2,7 +2,7 @@ function check_c1_contingency_violations_GM(network, optimizer;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01)     # Update_GM
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => false)            # Update_GM
-
+    results_c = Dict()
 
 if _IM.ismultinetwork(network)
     error(_LOGGER, "the branch flow cut generator can only be used on single networks")
@@ -83,19 +83,19 @@ for (i,cont) in enumerate(gen_contingencies)
     end
 
     try
-        solution =   _PM.compute_dc_pf(network_lal)["solution"]        #_PMACDC.run_acdcpf( (network_lal)["solution"], DCPPowerModel, ipopt_solver; setting = s)       # Update_GM function acdcpf  
+        solution =  _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
     catch exception
-        _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
+        _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
         continue
     end
+    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+    ##flow = _PM.calc_branch_flow_dc(network_lal)
+    ##_PM.update_data!(network_lal, flow)
 
-    flow = _PM.calc_branch_flow_dc(network_lal)
-    _PM.update_data!(network_lal, flow)
 
-
-    vio = _PMSC.calc_c1_violations(network_lal, network_lal)            # Update_GM
-
+    vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM
+    results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
     #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
     if vio.sm > sm_threshold
@@ -126,19 +126,20 @@ for (i,cont) in enumerate(branch_contingencies)
     cont_branch["br_status"] = 0
     _PMACDC.fix_data!(network_lal)
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
-   # try
-        solution =  _PMACDC.run_acdcpf( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+    try
+        solution =  _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
-    #catch exception
-    #    _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
-    #    continue
-    #end
+    catch exception
+        _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
+        continue
+    end
+    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+    ##flow = _PM.calc_branch_flow_dc(network_lal)
+    ##_PM.update_data!(network_lal, flow)
 
-    flow = _PM.calc_branch_flow_dc(network_lal)
-    _PM.update_data!(network_lal, flow)
-
-    vio = _PMSC.calc_c1_violations(network_lal, network_lal)          # Update_GM 
-
+    vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
+    results_c["vio_c$(cont.label)"] = vio
+   
     #info(_LOGGER, "$(cont.label) violations $(vio)")
     #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
     if vio.sm > sm_threshold
@@ -177,18 +178,18 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     cont_branchdc["status"] = 0                                       # Update_GM
 
     try
-        solution = _PM.compute_dc_pf(network_lal)["solution"]               # Update_GM function acdcpf
+        solution = _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
     catch exception
-        _PMSC.warn(_LOGGER, "linear solve failed on $(cont.label)")     # Update_GM
+        _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
         continue
     end
-
-    flow = _PM.calc_branch_flow_dc(network_lal)
-    _PM.update_data!(network_lal, flow)
+    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+    ##flow = _PM.calc_branch_flow_dc(network_lal)
+    ###_PM.update_data!(network_lal, flow)
 
     vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
-
+    results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
     #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
     if vio.smdc > sm_threshold
@@ -204,5 +205,5 @@ end
 time_contingencies = time() - time_contingencies_start
 _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts)
+return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, results_c)
 end

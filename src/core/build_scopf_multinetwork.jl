@@ -9,7 +9,7 @@ function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #U
 
     contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"])    #Update_GM
 
-    info(_LOGGER, "building scopf multi-network with $(contingencies+1) networks")
+    _PMSC.info(_LOGGER, "building scopf multi-network with $(contingencies+1) networks")
 
     if contingencies > 0
         mn_data = _PM.replicate(network, contingencies)
