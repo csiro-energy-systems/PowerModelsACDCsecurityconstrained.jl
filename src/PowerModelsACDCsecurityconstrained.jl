@@ -6,14 +6,14 @@ module PowerModelsACDCsecurityconstrained
     import Memento
     import JuMP
     import InfrastructureModels
-    import Plots
+    
     
 
     const _PM = PowerModels
     const _PMSC = PowerModelsSecurityConstrained
     const _PMACDC = PowerModelsACDC
     const _IM = InfrastructureModels
-    const _P = Plots
+    
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
     const C1_PG_LOSS_TOL = 1e-6                      # Update_GM
@@ -24,6 +24,7 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/conting.jl")
     include("core/PF.jl")
+    include("core/ACDCPF.jl")
     include("core/conting_v.jl")
     include("core/conting_c.jl")
     include("core/CalVio.jl")

@@ -83,13 +83,14 @@ for (i,cont) in enumerate(gen_contingencies)
     end
 
     try
-        solution =  _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution =  run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
+        results_c["c$(cont.label)"] = solution  
     catch exception
         _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
         continue
     end
-    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+                                          # result dictionary_GM
     ##flow = _PM.calc_branch_flow_dc(network_lal)
     ##_PM.update_data!(network_lal, flow)
 
@@ -126,14 +127,15 @@ for (i,cont) in enumerate(branch_contingencies)
     cont_branch["br_status"] = 0
     _PMACDC.fix_data!(network_lal)
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
-    try
-        solution =  _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+    #try
+        solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
-    catch exception
-        _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
-        continue
-    end
-    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+        results_c["c$(cont.label)"] = solution
+    #catch exception
+    #    _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
+    #    continue
+    #end
+                                           # result dictionary_GM
     ##flow = _PM.calc_branch_flow_dc(network_lal)
     ##_PM.update_data!(network_lal, flow)
 
@@ -178,13 +180,14 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     cont_branchdc["status"] = 0                                       # Update_GM
 
     try
-        solution = _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
+        results_c["c$(cont.label)"] = solution
     catch exception
         _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
         continue
     end
-    results_c["c$(cont.label)"] = network_lal                                        # result dictionary_GM
+                                           # result dictionary_GM
     ##flow = _PM.calc_branch_flow_dc(network_lal)
     ###_PM.update_data!(network_lal, flow)
 
