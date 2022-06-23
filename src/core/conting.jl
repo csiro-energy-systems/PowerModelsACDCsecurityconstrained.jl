@@ -18,6 +18,12 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
 
     time_start = time()
     resultscopf = Dict()                        # result dictionary_GM
+    network["gen_cuts"] = []
+    network["branch_cuts"] = []
+    network["branchdc_cuts"] = []
+    network["gen_cont_vio"] = []
+    network["branch_cont_vio"] = []
+    network["branchdc_cont_vio"] = []
     network_base = deepcopy(network)
     network_active = deepcopy(network)
 

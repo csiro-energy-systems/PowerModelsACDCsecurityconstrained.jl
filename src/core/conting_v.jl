@@ -1,6 +1,6 @@
 function check_c1_contingency_violations_GM(network, optimizer;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
-    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01)     # Update_GM
+    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => false)            # Update_GM
     results_c = Dict()
 
@@ -8,7 +8,6 @@ if _IM.ismultinetwork(network)
     error(_LOGGER, "the branch flow cut generator can only be used on single networks")
 end
 time_contingencies_start = time()
-
 
 network_lal = deepcopy(network) #lal -> losses as loads
 
@@ -98,10 +97,12 @@ for (i,cont) in enumerate(gen_contingencies)
     vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM
     results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
-    if vio.sm > sm_threshold
-        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint flow violations $(vio.sm)")           # Update_GM
+    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
+    #if vio.sm > sm_threshold
+        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")           # Update_GM
         push!(gen_cuts, cont)
+        append!( network["gen_cuts"], gen_cuts )
+        append!( network["gen_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
     end
 
     cont_gen["gen_status"] = 1
@@ -143,10 +144,12 @@ for (i,cont) in enumerate(branch_contingencies)
     results_c["vio_c$(cont.label)"] = vio
    
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
-    if vio.sm > sm_threshold
-        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint flow violations $(vio.sm)")                              # Update_GM
+    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
+    #if vio.sm > sm_threshold
+        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")                              # Update_GM
         push!(branch_cuts, cont)
+        append!( network["branch_cuts"], branch_cuts )
+        append!( network["branch_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
     end
 
     cont_branch["br_status"] = 1
@@ -194,10 +197,12 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
     results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
-    if vio.smdc > sm_threshold
-        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint flow violations $(vio.smdc)")            # Update_GM
+    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
+    #if vio.smdc > sm_threshold
+        _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
         push!(branchdc_cuts, cont)
+        append!( network["branchdc_cuts"], branchdc_cuts )
+        append!( network["branchdc_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
     end
 
     cont_branchdc["status"] = 1

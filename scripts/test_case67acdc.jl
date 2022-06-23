@@ -72,7 +72,8 @@ for i=1:length(data["contingencies"])
 end
 branch_counter_ac = 11
 branch_counter_dc = 2
-gen_counter = 0
+gen_counter = 1
+
 data["branch_contingencies"]=Vector{Any}(undef, branch_counter_ac)
 data["branchdc_contingencies"]=Vector{Any}(undef, branch_counter_dc)
 data["gen_contingencies"] = Vector{Any}(undef, gen_counter)
@@ -91,8 +92,6 @@ data["area_gens"]=Dict{Int64, Set{Int64}}()
 data["area_gens"][1] = Set([4, 3, 2, 1])
 
 
-
-
 #for i=1:length(data["gen"])
 #    data["gen"]["$i"]["ncost"] = 1
 #end
@@ -102,8 +101,8 @@ for i=1:length(data["gen"])
     data["gen"]["$i"]["model"] = 1
     data["gen"]["$i"]["pg"] = 0
     data["gen"]["$i"]["qg"] = 0
-    data["gen"]["$i"]["pmin"] = 0
-    data["gen"]["$i"]["qmin"] = -data["gen"]["$i"]["qmax"]
+    #data["gen"]["$i"]["pmin"] = 0
+    #data["gen"]["$i"]["qmin"] = -data["gen"]["$i"]["qmax"]
     data["gen"]["$i"]["ncost"] = 10
     data["gen"]["$i"]["cost"] = [0.114610934721, 148.906997825, 0.224657803731, 203.163028589, 0.33470467274, 257.869865285, 0.44475154175, 313.027507911, 0.5547984107589999, 368.635956469, 0.664845279769, 424.695210957, 0.774892148778, 481.205271377, 0.884939017788, 538.166137728, 0.9949858867970001, 595.57781001, 1.10503275581, 653.440288223]
     data["gen"]["$i"]["alpha"] = 1
@@ -170,8 +169,6 @@ data["contingencies"] = []
 #c1_networks["gen_contingencies"][3]=(idx = 2, label = "GEN-2-1", type = "gen")
 
 ##
-
-
 
 #PowerModelsACDC.process_additional_data!(c1_networks)
 #s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            settings=s
@@ -260,7 +257,7 @@ for i=1:length(resultACDCSCOPF2["b"]["solution"]["nw"]["0"]["branch"])
     end
     sloss_b[i] = sqrt(ploss_b[i]^2 + qloss_b[i]^2)
 end
-for i=1:length(resultACDCSCOPF2["b"]["solution"]["nw"]["0"]["branchdc"])
+    for i=1:length(resultACDCSCOPF2["b"]["solution"]["nw"]["0"]["branchdc"])
     pfdc_b[i] = resultACDCSCOPF2["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pf"]
     ptdc_b[i] = resultACDCSCOPF2["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pt"]
     sdc_u[i] = data["branchdc"]["$i"]["rateC"]
@@ -348,7 +345,7 @@ _P.ylabel!("Current (A)")
 _P.savefig("If_Ifdc_b_plot.png")
 
 ############################################# Contingency Plots ################################################
-for k = 1 : 4
+#for k = 1 : 4
     if k == 1
         i = 1
         m = 1
@@ -366,6 +363,9 @@ for k = 1 : 4
         m = 4
         n = 13
     end
+    i = 1
+    m = 1
+    n = 1
    for i = 1 : n     #length(data["gen_contingencies"]) + length( data["branch_contingencies"]) + length(data["branchdc_contingencies"])
         vm_ac_c = zeros(Float64, length(resultACDCSCOPF2[string(m)]["sol_c"]["c$i"]["bus"]))
         vm_dc_c = zeros(Float64, length(resultACDCSCOPF2[string(m)]["sol_c"]["c$i"]["busdc"]))
@@ -481,7 +481,7 @@ for k = 1 : 4
         _P.ylabel!("Current (A)")
         _P.savefig("If_Ifdc_c$i.png")
    end
-end
+#end
 
 ############################################# Final Solution Plots ################################################
 
