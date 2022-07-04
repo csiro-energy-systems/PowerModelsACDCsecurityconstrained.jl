@@ -38,7 +38,9 @@ gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_l
 branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
 branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
 
+######################################################################################################################################################
 gen_cuts = []
+gen_cut_vio = 0.0
 for (i,cont) in enumerate(gen_contingencies)
     if length(gen_cuts) >= gen_contingency_limit
         _PMSC.info(_LOGGER, "hit gen flow cut limit $(gen_contingency_limit)")       # Update_GM
@@ -97,14 +99,15 @@ for (i,cont) in enumerate(gen_contingencies)
     vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM
     results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
+    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
     #if vio.sm > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")           # Update_GM
         push!(gen_cuts, cont)
-        append!( network["gen_cuts"], gen_cuts )
-        append!( network["gen_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
+        gen_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
+    else
+        gen_cut_vio = 0.0
     end
-
+    
     cont_gen["gen_status"] = 1
     cont_gen["pg"] = pg_lost
     network_lal["delta"] = 0.0
@@ -112,6 +115,7 @@ end
 ######################################################################################################################################################
 
 branch_cuts = []
+branch_cut_vio = 0.0
 for (i,cont) in enumerate(branch_contingencies)
     if length(branch_cuts) >= branch_contingency_limit
         _PMSC.info(_LOGGER, "hit branch flow cut limit $(branch_contingency_limit)")                   # Update_GM
@@ -144,12 +148,13 @@ for (i,cont) in enumerate(branch_contingencies)
     results_c["vio_c$(cont.label)"] = vio
    
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
+    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
     #if vio.sm > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")                              # Update_GM
         push!(branch_cuts, cont)
-        append!( network["branch_cuts"], branch_cuts )
-        append!( network["branch_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
+        branch_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
+    else
+        branch_cut_vio = 0.0
     end
 
     cont_branch["br_status"] = 1
@@ -167,6 +172,7 @@ end
 ########################################################################################################################################
 
 branchdc_cuts = []       # Update_GM
+branchdc_cut_vio = 0.0
 for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     if length(branchdc_cuts) >= branchdc_contingency_limit       # Update_GM
         _PMSC.info(_LOGGER, "hit branch flow cut limit $(branchdc_contingency_limit)")                # Update_GM
@@ -201,8 +207,9 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     #if vio.smdc > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
         push!(branchdc_cuts, cont)
-        append!( network["branchdc_cuts"], branchdc_cuts )
-        append!( network["branchdc_cont_vio"], (vio.pg + vio.qg + vio.sm + vio.smdc) )
+        branchdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
+    else
+        branchdc_cut_vio = 0.0
     end
 
     cont_branchdc["status"] = 1
@@ -213,5 +220,5 @@ end
 time_contingencies = time() - time_contingencies_start
 _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, results_c)
+return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, results_c)
 end

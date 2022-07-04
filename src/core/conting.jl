@@ -18,12 +18,9 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
 
     time_start = time()
     resultscopf = Dict()                        # result dictionary_GM
-    network["gen_cuts"] = []
-    network["branch_cuts"] = []
-    network["branchdc_cuts"] = []
-    network["gen_cont_vio"] = []
-    network["branch_cont_vio"] = []
-    network["branchdc_cont_vio"] = []
+    network["gen_cont_vio"] = 0.0
+    network["branch_cont_vio"] = 0.0
+    network["branchdc_cont_vio"] = 0.0
     network_base = deepcopy(network)
     network_active = deepcopy(network)
 
@@ -34,6 +31,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     network_active["gen_contingencies"] = []
     network_active["branch_contingencies"] = []
     network_active["branchdc_contingencies"] = []                                     #Update_GM
+
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
     multinetwork = build_c1_scopf_multinetwork_GM(network_active)                        #Update_GM
     result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = s)         #Update_GM
@@ -68,6 +66,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
                 _PMSC.warn(_LOGGER, "generator contingency $(cont.label) is active but not secure")
             else
                 push!(network_active["gen_contingencies"], cont)
+                network_active["gen_cont_vio"] += contingencies.gen_cut_vio
                 contingencies_found += 1
             end
         end
@@ -78,6 +77,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
                 _PMSC.warn(_LOGGER, "branch contingency $(cont.label) is active but not secure")
             else
                 push!(network_active["branch_contingencies"], cont)
+                network_active["branch_cont_vio"] += contingencies.branch_cut_vio
                 contingencies_found += 1
             end
         end
@@ -87,7 +87,8 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
             if cont in network_active["branchdc_contingencies"]                                             #Update_GM
                 _PMSC.warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")                #Update_GM
             else
-                push!(network_active["branchdc_contingencies"], cont)                                       #Update_GM
+                push!(network_active["branchdc_contingencies"], cont)                                      #Update_GM
+                network_active["branchdc_cont_vio"] += contingencies.branchdc_cut_vio
                 contingencies_found += 1                                                                    #Update_GM
             end
         end

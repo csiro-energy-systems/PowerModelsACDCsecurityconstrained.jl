@@ -142,7 +142,7 @@ function build_c1_scopf_GM(pm::_PM.AbstractPowerModel)
                 _PMACDC.constraint_conv_firing_angle(pm, i, nw=nw)                                     # Update_GM
             end                                                                            # Update_GM
         end
-
+ 
     end
 
 # Update_GM
@@ -152,21 +152,32 @@ function build_c1_scopf_GM(pm::_PM.AbstractPowerModel)
 
     # explicit network id needed because of conductor-less
     pg_cost = _PMSC.var(pm, 0, :pg_cost)
-    for i in contigency_ids
-        branch_cont_vio[i] = pm.ref[:it][pm][:nw][nw][:branch_cont_vio][i] 
-        branchdc_cont_vio[i] = pm.ref[:it][pm][:nw][nw][:branchdc_cont_vio][i]
-        gen_cont_vio[i] = pm.ref[:it][pm][:nw][nw][:gen_cont_vio][i]   
-    end
+    #for nw in contigency_ids
+    #    branch_cont_vio[nw] = _PM.ref(pm, nnw, :branch_cont_vio) 
+    #    branchdc_cont_vio[nw] = _PM.ref(pm, nw, :branchdc_cont_vio)
+    #    gen_cont_vio[nw] = _PM.ref(pm, nw, :gen_cont_vio)   
+    #end
     
 
     JuMP.@objective(pm.model, Min,
-        sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
-        sum( 5e5*branch_cont_vio[i] for i in 1:length(_PMSC.ref(pm, :branch_cuts)) ) +
-        sum( 5e5*branchdc_cont_vio[i] for i in 1:length(_PMSC.ref(pm, :branchdc_cuts)) ) + 
-        sum( 5e5*gen_cont_vio[i] for i in 1:length(_PMSC.ref(pm, :gen_cuts)) )
+        sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) )
+       
     )
     #_PM.objective_min_fuel_cost(pm)
 end
+#convert(Array{Float64,1},
+
+#sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
+#sum(  5e5*_PM.ref(pm, id, :branch_cont_vio) for id in _PM.nw_ids(pm)   ) +
+#sum(  5e5*_PM.ref(pm, id, :branchdc_cont_vio) for id in _PM.nw_ids(pm)  ) + 
+#sum( 5e5*_PM.ref(pm, id, :gen_cont_vio) for id in _PM.nw_ids(pm)  )
+
+#JuMP.@objective(pm.model, Min,
+##sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
+#sum( 5e5*_PM.ref(pm, i, :branch_cont_vio) for (i, branch_contingencies) in _PM.ref(pm, :branch_contingencies) ) +
+#sum( 5e5*_PM.ref(pm, i, :branchdc_cont_vio) for (i, branchdc_contingencies) in _PM.ref(pm, :branchdc_contingencies) ) + 
+#sum( 5e5*_PM.ref(pm, i, :gen_cont_vio) for (i, gen_contingencies) in _PM.ref(pm, :gen_contingencies) )
+#)
 
 
 
