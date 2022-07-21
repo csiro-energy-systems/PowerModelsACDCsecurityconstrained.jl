@@ -8,7 +8,10 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     end
 
     time_start = time()
-    
+    network["gen_cont_vio"] = 0.0
+    network["branch_cont_vio"] = 0.0
+    network["branchdc_cont_vio"] = 0.0
+
     network_base = deepcopy(network)
     network_active = deepcopy(network)
 
@@ -37,7 +40,7 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     while contingencies_found > 0
         time_start_iteration = time()
 
-        contingencies = check_c1_contingency_violations_GM(network_base, model_type, optimizer, contingency_limit=iteration, setting)    #Update_GM
+        contingencies = check_c1_contingency_violations_GM(network_base, model_type, optimizer, setting, contingency_limit=iteration)    #Update_GM
         #println(contingencies)
         result_scopf["$iteration"] = Dict{String,Any}()
         result_scopf["$iteration"]["sol_c"] = contingencies.results_c                                        # result dictionary_GM

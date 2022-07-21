@@ -45,7 +45,7 @@ for i=1:length(data["gen"])
 end
 
 
-###################################################
+##
 PowerModelsACDC.process_additional_data!(data)
 
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
