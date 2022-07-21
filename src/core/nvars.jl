@@ -93,7 +93,20 @@ end
 
 
 
+function variable_c1_branch_contigency_power_violation(pm::_PM.AbstractPowerModel; nw::Int=nw_id_default, bounded::Bool=true, report::Bool=true)
+    branch_cont_flow_vio = var(pm, nw)[:branch_cont_flow_vio] = JuMP.@variable(pm.model,
+        [i in 1:length(ref(pm, :branch_flow_cuts))], base_name="$(nw)_branch_cont_flow_vio",
+        #start = _PM.comp_start_value(ref(pm, nw, :bus, i), "cont_branch_vio_start")
+    )
 
+    if bounded
+        for i in 1:length(ref(pm, :branch_flow_cuts))
+            JuMP.set_lower_bound(branch_cont_flow_vio[i], 0.0)
+        end
+    end
+
+    #report && _PM.sol_component_value(pm, nw, :gen, :pg_delta, ids(pm, nw, :gen), pg_delta)
+end
 
 
 

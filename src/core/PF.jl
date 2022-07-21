@@ -66,7 +66,7 @@ function build_c1_scopf_GM(pm::_PM.AbstractPowerModel)
     # Update_GM
 
     contigency_ids = [id for id in _PM.nw_ids(pm) if id != 0]         # Update_GM_PMSC
-    @show contigency_ids
+    
     for nw in contigency_ids
 #         variable_gen_contigency_violation(pm, nw=nw)           # Update_GM
 #         variable_branch_contigency_violation(pm, nw=nw)        # Update_GM
@@ -113,7 +113,7 @@ function build_c1_scopf_GM(pm::_PM.AbstractPowerModel)
         end
 
 
-        for i in _PM.ids(pm, :branch, nw=nw)                      # Update_GM_PMSC
+        for i in _PM.ids(pm,  nw=nw, :branch)                      # Update_GM_PMSC
             _PM.constraint_ohms_yt_from(pm, i, nw=nw)
             _PM.constraint_ohms_yt_to(pm, i, nw=nw)
 

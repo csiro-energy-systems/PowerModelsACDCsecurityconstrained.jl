@@ -10,9 +10,9 @@ using PowerModelsSecurityConstrained
 using PowerModelsACDCsecurityconstrained
 
 
-nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)
+nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)  
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
-#lp_solver = optimizer_with_attributes(Cbc.Optimizer)
+
 
 file = "./data/case67acdc_scopf.m"
 data = parse_file(file)
@@ -72,7 +72,7 @@ for i=1:length(data["contingencies"])
 end
 branch_counter_ac = 11
 branch_counter_dc = 2
-gen_counter = 1
+gen_counter = 2
 
 data["branch_contingencies"]=Vector{Any}(undef, branch_counter_ac)
 data["branchdc_contingencies"]=Vector{Any}(undef, branch_counter_dc)
@@ -108,6 +108,13 @@ for i=1:length(data["gen"])
     data["gen"]["$i"]["alpha"] = 1
 end
 data["contingencies"] = []
+
+####################################################################################################################################################################
+PowerModelsACDC.process_additional_data!(data)
+resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(data, PowerModels.DCPPowerModel, lp_solver)
+
+####################################################################################################################################################################
+
 #data["gen"]["1"]["cost"] = [0.37965, 9706.86, 0.610183, 17694.8]
 #data["gen"]["2"]["cost"] = [0.0, 0.0, 0.0, 0.0]
 #data["gen"]["3"]["cost"] = [0.0580178826582, 3409.77768201, 0.143237964633, 4639.70192051]
@@ -174,8 +181,20 @@ data["contingencies"] = []
 #s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            settings=s
 
 #resultACDCSCOPF1=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.DCPPowerModel, lp_solver)
-PowerModelsACDC.process_additional_data!(data)
-resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(data, PowerModels.ACPPowerModel, nlp_solver)
+############################################# Soft test ################################################
+#PowerModelsACDC.process_additional_data!(data)
+#result = PowerModelsACDC.run_acdcopf(data, ACPPowerModel, nlp_solver)
+#PowerModels.update_data!(data, result["solution"])
+#cuts = PowerModelsACDCsecurityconstrained.check_c1_contingencies_branch_power_GM(data, nlp_solver, total_cut_limit=20, gen_flow_cuts=[], branch_flow_cuts=[])    # Filtering 
+#println(length(cuts.gen_cuts) + length(cuts.branch_cuts))
+#data["gen_flow_cuts"] = cuts.gen_cuts
+#data["branch_flow_cuts"] = cuts.branch_cuts
+#data["branchdc_flow_cuts"] = cuts.branchdc_cuts
+
+#result1 = PowerModelsACDCsecurityconstrained.run_c1_scopf_cuts_soft_GM(data, ACPPowerModel, nlp_solver)  #_GM
+
+############################################# Soft test ################################################
+
 
 ############################################# Base Case Plots ################################################
 
@@ -632,3 +651,33 @@ _P.plot!(-ones(102)*3500, seriestype = :stepmid, linestyle = :dash, color = "blu
 _P.xlabel!("Branch No.")
 _P.ylabel!("Current (A)")
 _P.savefig("If_Ifdc_f_plot.png")
+
+
+############################# 51 contingencies
+contingency_ids = zeros(Int64, 51)
+vm_cont = zeros(Float64, 51)
+pg_cont = zeros(Float64, 51)
+qg_cont = zeros(Float64, 51)
+sm_cont = zeros(Float64, 51)
+smdc_cont = zeros(Float64, 51)
+for i=1:51,
+    contingency_ids[i] = i
+    vm_cont[i] = resultACDCSCOPF2["8"]["sol_c"]["vio_c$i"][:vm]
+    pg_cont[i] = resultACDCSCOPF2["8"]["sol_c"]["vio_c$i"][:pg]
+    qg_cont[i]= resultACDCSCOPF2["8"]["sol_c"]["vio_c$i"][:qg]
+    sm_cont[i] = resultACDCSCOPF2["8"]["sol_c"]["vio_c$i"][:sm]
+    smdc_cont[i] = resultACDCSCOPF2["8"]["sol_c"]["vio_c$i"][:smdc]
+end
+contingency_ids[49] = 101
+contingency_ids[50] = 102
+contingency_ids[51] = 1001
+
+########### large set of 51 contingencies 
+_P.plot((contingency_ids, sm_cont), seriestype = :scatter, color = "blue", label = "vm_cont", grid = true, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box, ylims = [0.5, 15],  title = "Violations for 51 contingencies")        # framestyle = :box,
+_P.plot!((contingency_ids, pg_cont), seriestype = :scatter, color = "red", label = "pg_cont")
+_P.plot!((contingency_ids, qg_cont), seriestype = :scatter, color = "green", label = "qg_cont")
+_P.plot!((contingency_ids, sm_cont), seriestype = :scatter, color = "black", label = "sm_cont")
+_P.plot!((contingency_ids, smdc_cont), seriestype = :scatter, color = "brown", label = "smdc_cont")
+_P.xlabel!("contingency_ids")
+_P.ylabel!("Violations (p.u)")
+_P.savefig("cont51.png")

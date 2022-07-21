@@ -1,4 +1,4 @@
-function check_c1_contingency_violations_GM(network, optimizer;
+function check_c1_contingency_violations_GM(network, model_type, optimizer;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
     s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => false)            # Update_GM
@@ -84,7 +84,7 @@ for (i,cont) in enumerate(gen_contingencies)
     end
 
     try
-        solution =  run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution =  run_acdcpf_GM( network_lal, model_type, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
         results_c["c$(cont.label)"] = solution  
     catch exception
@@ -99,8 +99,8 @@ for (i,cont) in enumerate(gen_contingencies)
     vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM
     results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
-    #if vio.sm > sm_threshold
+    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
+    if vio.sm > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")           # Update_GM
         push!(gen_cuts, cont)
         gen_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
@@ -133,7 +133,7 @@ for (i,cont) in enumerate(branch_contingencies)
     _PMACDC.fix_data!(network_lal)
     #export network_lal        #@show # Update_GM     # Update_GM     # Update_GM
     #try
-        solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution = run_acdcpf_GM( network_lal, model_type, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
         results_c["c$(cont.label)"] = solution
     #catch exception
@@ -148,8 +148,8 @@ for (i,cont) in enumerate(branch_contingencies)
     results_c["vio_c$(cont.label)"] = vio
    
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
-    #if vio.sm > sm_threshold
+    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
+    if vio.sm > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")                              # Update_GM
         push!(branch_cuts, cont)
         branch_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
@@ -189,7 +189,7 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     cont_branchdc["status"] = 0                                       # Update_GM
 
     try
-        solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+        solution = run_acdcpf_GM( network_lal, model_type, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
         _PM.update_data!(network_lal, solution)
         results_c["c$(cont.label)"] = solution
     catch exception
@@ -203,8 +203,8 @@ for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
     vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
     results_c["vio_c$(cont.label)"] = vio
     #info(_LOGGER, "$(cont.label) violations $(vio)")
-    if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
-    #if vio.smdc > sm_threshold
+    #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
+    if vio.smdc > sm_threshold
         _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
         push!(branchdc_cuts, cont)
         branchdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc

@@ -29,10 +29,10 @@ module PowerModelsACDCsecurityconstrained
     include("core/conting_c.jl")
     include("core/CalVio.jl")
     include("core/build_scopf_multinetwork.jl")
-    include("core/nvars.jl")
+    include("core/bus_inj.jl")
     include("core/PF_soft.jl")
-    include("core/conting_soft.jl")
     include("core/conting_soft_v.jl")
+    include("core/PF_convex_cuts.jl")
     
 
 end # module
