@@ -4,7 +4,7 @@ being the base case
 """
 function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #Update_GM
     if _IM.ismultinetwork(network)
-        error(_LOGGER, "build scopf can only be used on single networks")
+        error(_LOGGER, "build ACDC scopf can only be used on single networks")
     end
 
     contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"])    #Update_GM
@@ -57,6 +57,7 @@ function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #U
 
             network_id += 1
         end
+        
         for cont in base_network["branch_contingencies"]
             cont_nw = mn_data["nw"]["$(network_id)"]
             cont_nw["name"] = cont.label
@@ -85,7 +86,6 @@ function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #U
             network_id += 1
         end
 
-        ###########################################################################################  #Update_GM
         for cont in base_network["branchdc_contingencies"]          #Update_GM
             cont_nw = mn_data["nw"]["$(network_id)"]
             cont_nw["name"] = cont.label
@@ -113,7 +113,6 @@ function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #U
 
             network_id += 1
         end
-        ###########################################################################################  #Update_GM
 
     else
         mn_data = _PM.replicate(network, 1)

@@ -1,43 +1,26 @@
-# function greet()
-#     print("hello world")
-# end
-# function run_c1_scopf_contigency_cuts_GM(ini_file::String, model_type::Type, optimizer; scenario_id::String="", kwargs...)
-#     goc_data = _PMSC.parse_c1_case(ini_file, scenario_id=scenario_id)               # parse_c1_case do not need any changes now
-#     network = build_c1_pm_model(goc_data)                                        
-#     return run_c1_scopf_contigency_cuts_GM(network, model_type, optimizer; kwargs...)
-# end
-
 """
-Solves a SCOPF problem by iteratively checking for violated contingencies and 
+Solves an ACDC SCOPF problem by iteratively checking for violated contingencies and 
 resolving until a fixed-point is reached
 """
-function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type::Type, optimizer; max_iter::Int=100, time_limit::Float64=Inf)    #Update_GM
+function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type::Type, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)    #Update_GM
     if _IM.ismultinetwork(network)
-        error(_LOGGER, "run_c1_scopf_contigency_cuts can only be used on single networks")
+        error(_LOGGER, "run_c1_scopf_contigency_cuts_GM can only be used on single networks")
     end
 
     time_start = time()
-    resultscopf = Dict()                        # result dictionary_GM
-    network["gen_cont_vio"] = 0.0
-    network["branch_cont_vio"] = 0.0
-    network["branchdc_cont_vio"] = 0.0
+    
     network_base = deepcopy(network)
     network_active = deepcopy(network)
 
-    gen_contingencies = network_base["gen_contingencies"]
-    branch_contingencies = network_base["branch_contingencies"]
-    branchdc_contingencies = network_base["branchdc_contingencies"]      #Update_GM
-
     network_active["gen_contingencies"] = []
     network_active["branch_contingencies"] = []
-    network_active["branchdc_contingencies"] = []                                     #Update_GM
+    network_active["branchdc_contingencies"] = []
 
-    s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
-    multinetwork = build_c1_scopf_multinetwork_GM(network_active)                        #Update_GM
-    result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = s)         #Update_GM
+    multinetwork = build_c1_scopf_multinetwork_GM(network_active)
+    result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = setting)
     
     if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
-        error(_LOGGER, "base-case SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
+        error(_LOGGER, "base-case ACDC SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
     end
     #_PM.print_summary(result["solution"])
     solution = result["solution"]["nw"]["0"]
@@ -46,19 +29,19 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
     _PM.update_data!(network_base, solution)
     _PM.update_data!(network_active, solution)
 
-    resultscopf["b"] = result                                                       # result dictionary_GM
-
     result["iterations"] = 0
 
     iteration = 1
     contingencies_found = 1
+    result_scopf = Dict{String,Any}()
     while contingencies_found > 0
         time_start_iteration = time()
 
         contingencies = check_c1_contingency_violations_GM(network_base, model_type, optimizer, contingency_limit=iteration)    #Update_GM
         #println(contingencies)
-        resultscopf[string(iteration)] = Dict()
-        resultscopf[string(iteration)]["sol_c"] = contingencies.results_c                                        # result dictionary_GM
+        result_scopf["$iteration"] = Dict{String,Any}()
+        result_scopf["$iteration"]["sol_c"] = contingencies.results_c                                        # result dictionary_GM
+
         contingencies_found = 0
         #append!(network_active["gen_contingencies"], contingencies.gen_contingencies)
         for cont in contingencies.gen_contingencies
@@ -83,13 +66,13 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
         end
 
         #append!(network_active["branchdc_contingencies"], contingencies.branchdc_contingencies)
-        for cont in contingencies.branchdc_contingencies                                                    #Update_GM
-            if cont in network_active["branchdc_contingencies"]                                             #Update_GM
-                _PMSC.warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")                #Update_GM
+        for cont in contingencies.branchdc_contingencies
+            if cont in network_active["branchdc_contingencies"]
+                _PMSC.warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")
             else
-                push!(network_active["branchdc_contingencies"], cont)                                      #Update_GM
+                push!(network_active["branchdc_contingencies"], cont)
                 network_active["branchdc_cont_vio"] += contingencies.branchdc_cut_vio
-                contingencies_found += 1                                                                    #Update_GM
+                contingencies_found += 1
             end
         end
 
@@ -106,7 +89,8 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
         time_solve_start = time()
         #_PMACDC.fix_data!(network_active)
         multinetwork = build_c1_scopf_multinetwork_GM(network_active)   #Update_GM
-        result = run_c1_scopf_GM_soft(multinetwork, model_type, optimizer; setting = s)   #Update_GM    _soft
+        result = run_c1_scopf_GM(multinetwork, model_type, optimizer; setting = setting)   #Update_GM    _soft
+        # result = run_c1_scopf_GM_soft(multinetwork, model_type, optimizer; setting = setting)   #Update_GM    _soft
         if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
             _PMSC.warn(_LOGGER, "scopf solve failed with status $(result["termination_status"]), terminating fixed-point early")
             break
@@ -134,6 +118,6 @@ function run_c1_scopf_contigency_cuts_GM(network::Dict{String,<:Any}, model_type
 
     result["solution"] = solution
     result["iterations"] = iteration
-    resultscopf["f"] = result                                                       # result dictionary_GM
-    return resultscopf
+    result_scopf["final"] = result                                                       # result dictionary_GM
+    return result_scopf
 end

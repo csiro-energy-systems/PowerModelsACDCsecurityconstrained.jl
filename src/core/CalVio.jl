@@ -79,7 +79,6 @@ function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{Strin
         end
     end
 
-    ###################################################################   # Update_GM   ###############################################################
 
     smdc_vio = NaN                                                                        # Update_GM 
     if haskey(solution, "branchdc")                                                             # Update_GM 
@@ -91,14 +90,8 @@ function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{Strin
                 s_fr = abs(branchdc_sol["pf"])                                                
                 s_to = abs(branchdc_sol["pt"])
 
-                #if !isnan(branchdc_sol["qf"]) && !isnan(branchdc_sol["qt"])
-                #    s_fr = sqrt(branchdc_sol["pf"]^2 + branchdc_sol["qf"]^2)
-                #    s_to = sqrt(branchdc_sol["pt"]^2 + branchdc_sol["qt"]^2)
-                #end
-
                 # note true model is rateC
                 #vio_flag = false
-                #rate_keydc=rate_keydc/100;                           # Update_GM 
                 rating = branchdc[rate_keydc]
 
                 if s_fr > rating
