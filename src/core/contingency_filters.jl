@@ -1,4 +1,4 @@
-function check_c1_contingency_violations_GM(network, model_type, optimizer, setting=setting;
+function check_c1_contingency_violations_GM(network, model_type, optimizer, setting;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
 
