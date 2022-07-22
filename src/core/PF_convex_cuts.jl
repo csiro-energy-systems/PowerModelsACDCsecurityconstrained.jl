@@ -1,7 +1,7 @@
 ########################################################################################################################################################################
-function run_c1_scopf_GM(data, model_constructor, solver; kwargs...)                                         # Update_GM
+function run_scopf(data, model_constructor, solver; kwargs...)                                         # Update_GM
     # _PMACDC.process_additional_data!(data)                                                                 # Update_GM
-    return _PM.run_model(data, model_constructor, solver, build_c1_scopf_GM; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)   # Update_GM
+    return _PM.run_model(data, model_constructor, solver, build_scopf; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)   # Update_GM
 end
 
 
@@ -9,7 +9,7 @@ end
 Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
-function build_c1_scopf_GM(pm::_PM.AbstractPowerModel)
+function build_scopf(pm::_PM.AbstractPowerModel)
     # base-case network id is 0
 
     _PM.variable_bus_voltage(pm, nw=0)

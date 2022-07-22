@@ -1,4 +1,4 @@
-function check_c1_contingency_violations_GM(network, model_type, optimizer, setting;
+function check_contingency_violations(network, model_type, optimizer, setting;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
 
@@ -89,7 +89,7 @@ function check_c1_contingency_violations_GM(network, model_type, optimizer, sett
             continue
         end
 
-        vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM
+        vio = calc_violations(network_lal, network_lal)            # Update_GM
         results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
@@ -132,8 +132,8 @@ function check_c1_contingency_violations_GM(network, model_type, optimizer, sett
            _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
            continue
         end
-
-        vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
+        
+        vio = calc_violations(network_lal, network_lal)          # Update_GM 
         results_c["vio_c$(cont.label)"] = vio
     
         #info(_LOGGER, "$(cont.label) violations $(vio)")
@@ -177,7 +177,7 @@ function check_c1_contingency_violations_GM(network, model_type, optimizer, sett
             continue
         end
 
-        vio = calc_c1_violations_GM(network_lal, network_lal)          # Update_GM 
+        vio = calc_violations(network_lal, network_lal)          # Update_GM 
         results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold

@@ -1,4 +1,4 @@
-function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
+function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
     vm_vio = 0.0
     for (i,bus) in network["bus"]
         if bus["bus_type"] != 4

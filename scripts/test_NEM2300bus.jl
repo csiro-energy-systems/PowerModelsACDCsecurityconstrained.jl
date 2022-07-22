@@ -56,4 +56,4 @@ end
 
 
 PowerModelsACDC.process_additional_data!(network)
-resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(network, PowerModels.ACPPowerModel, nlp_solver)
+resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(network, PowerModels.ACPPowerModel, nlp_solver)

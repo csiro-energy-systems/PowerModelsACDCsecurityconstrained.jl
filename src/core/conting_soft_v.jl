@@ -125,7 +125,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         #_PM.update_data!(network_lal, flow)
 
 
-        vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)            # Update_GM 
 
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
@@ -203,7 +203,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         #flow = _PM.calc_branch_flow_dc(network_lal)
         #_PM.update_data!(network_lal, flow)
 
-        vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)            # Update_GM 
 
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
@@ -267,7 +267,7 @@ branchdc_cuts = []
             continue
         end
 
-        vio = calc_c1_violations_GM(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)            # Update_GM 
 
         ##info(_LOGGER, "$(cont.label) violations $(vio)")
         ##if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold

@@ -48,9 +48,12 @@ end
 ##
 PowerModelsACDC.process_additional_data!(data)
 
-setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)        #Update_GM
+setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
-result_ACDCscopf2 = PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(data, PowerModels.DCPPowerModel, lp_solver, setting)
+# result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
+# result = run_scopf_soft(multinetwork, model_type, optimizer; setting = setting)
+
+result_ACDCscopf2 = PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(data, PowerModels.DCPPowerModel, lp_solver, setting, run_scopf)
 
 
 

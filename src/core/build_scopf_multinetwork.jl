@@ -2,7 +2,7 @@
 transforms a contigency list into explicit multinetwork data with network 0
 being the base case
 """
-function build_c1_scopf_multinetwork_GM(network::Dict{String,<:Any})          #Update_GM
+function build_scopf_multinetwork(network::Dict{String,<:Any})          #Update_GM
     if _IM.ismultinetwork(network)
         error(_LOGGER, "build ACDC scopf can only be used on single networks")
     end

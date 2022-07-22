@@ -9,9 +9,9 @@ This formulation is used in conjunction with the contingency filters that
 generate PTDF cuts.s
 
 """
-function run_c1_scopf_GM_soft(data, model_constructor, solver; kwargs...)                                         # Update_GM
-    # _PMACDC.process_additional_data!(data)                                                                 # Update_GM
-    return _PM.run_model(data, model_constructor, solver, build_c1_scopf_GM_soft; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)   # Update_GM
+function run_scopf_soft(data, model_constructor, solver; kwargs...)
+    # _PMACDC.process_additional_data!(data)
+    return _PM.run_model(data, model_constructor, solver, build_scopf_soft; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)
 end
 
 
@@ -19,7 +19,7 @@ end
 Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
-function build_c1_scopf_GM_soft(pm::_PM.AbstractPowerModel)
+function build_scopf_soft(pm::_PM.AbstractPowerModel)
     
 
     _PM.variable_bus_voltage(pm, nw=0)
@@ -35,11 +35,8 @@ function build_c1_scopf_GM_soft(pm::_PM.AbstractPowerModel)
     variable_power_balance_ac_positive_violation(pm, nw=0)         # Update_GM
     variable_power_balance_dc_positive_violation(pm, nw=0)         # Update_GM
 
-    # Update_GM
     _PM.constraint_model_voltage(pm, nw=0)
-    # Update_GM
     _PMACDC.constraint_voltage_dc(pm, nw=0)               # Update_GM
-    # Update_GM
     
     for i in _PM.ids(pm, nw=0, :ref_buses)                  # Update_GM_PMSC
         _PM.constraint_theta_ref(pm, i, nw=0)
@@ -59,7 +56,6 @@ function build_c1_scopf_GM_soft(pm::_PM.AbstractPowerModel)
         constraint_thermal_limit_to_soft(pm, i, nw=0)
     end
 
-    # Update_GM
 
     for i in _PM.ids(pm, nw=0, :busdc)                                                # Update_GM now nw=0, otherwise if nw for loop
         constraint_power_balance_dc_soft(pm, i, nw=0)                                      # Update_GM
@@ -78,7 +74,7 @@ function build_c1_scopf_GM_soft(pm::_PM.AbstractPowerModel)
         end                                                                            # Update_GM
     end
                                                                                   
-    ############################################################################################################## Update_GM
+
     contigency_ids = [id for id in _PM.nw_ids(pm) if id != 0]         # Update_GM_PMSC
     
     for nw in contigency_ids
@@ -139,8 +135,6 @@ function build_c1_scopf_GM_soft(pm::_PM.AbstractPowerModel)
             constraint_thermal_limit_from_soft(pm, i, nw=nw)
             constraint_thermal_limit_to_soft(pm, i, nw=nw)
         end
-
-        # Update_GM
 
 
         for i in _PM.ids(pm, nw=nw, :busdc)                                                # Update_GM now nw=0, otherwise if nw for loop

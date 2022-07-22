@@ -111,9 +111,9 @@ c1_networks["gen_contingencies"][3]=(idx = 2, label = "GEN-2-1", type = "gen")
 #PowerModelsACDC.process_additional_data!(c1_networks)
 #s = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)            settings=s
 
-#resultACDCSCOPF1=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.DCPPowerModel, lp_solver)
-resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.ACPPowerModel, nlp_solver)
-#resultACDCSCOPF3=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c1_networks, PowerModels.ACRPowerModel, nlp_solver)   # Constraints required constraint_ohms_dc_branch(::ACRPowerModel, ::Int64, ...
+#resultACDCSCOPF1=PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(c1_networks, PowerModels.DCPPowerModel, lp_solver)
+resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(c1_networks, PowerModels.ACPPowerModel, nlp_solver)
+#resultACDCSCOPF3=PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(c1_networks, PowerModels.ACRPowerModel, nlp_solver)   # Constraints required constraint_ohms_dc_branch(::ACRPowerModel, ::Int64, ...
 
 
     ## IEEE14 bus network with four contingencies
@@ -125,4 +125,4 @@ resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts
 #c2_networks["branchdc_contingencies"]=Vector{Any}(undef, 1)
 #c2_networks["branchdc_contingencies"][1]=(idx = 9, label = "LINE-6-12-R", type = "branchdc")
     ##
-#resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_c1_scopf_contigency_cuts_GM(c2_networks, PowerModels.DCPPowerModel, lp_solver)
+#resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(c2_networks, PowerModels.DCPPowerModel, lp_solver)
