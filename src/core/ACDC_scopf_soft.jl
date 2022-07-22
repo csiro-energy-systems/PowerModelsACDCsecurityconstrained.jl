@@ -24,25 +24,25 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
     _PM.variable_bus_voltage(pm, nw=0)
     _PM.variable_gen_power(pm, nw=0)
-    _PM.variable_branch_power(pm, nw=0)    # Update_GM
-    _PMACDC.variable_active_dcbranch_flow(pm, nw=0)       # Update_GM
-    _PMACDC.variable_dcbranch_current(pm, nw=0)           # Update_GM
-    _PMACDC.variable_dc_converter(pm, nw=0)               # Update_GM
-    _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=0)   # Update_GM
+    _PM.variable_branch_power(pm, nw=0)    
+    _PMACDC.variable_active_dcbranch_flow(pm, nw=0)       
+    _PMACDC.variable_dcbranch_current(pm, nw=0)           
+    _PMACDC.variable_dc_converter(pm, nw=0)               
+    _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=0)   
 
-    variable_branch_thermal_limit_violation(pm, nw=0)         # Update_GM
-    variable_branchdc_thermal_limit_violation(pm, nw=0)         # Update_GM
-    variable_power_balance_ac_positive_violation(pm, nw=0)         # Update_GM
-    variable_power_balance_dc_positive_violation(pm, nw=0)         # Update_GM
+    variable_branch_thermal_limit_violation(pm, nw=0)         
+    variable_branchdc_thermal_limit_violation(pm, nw=0)         
+    variable_power_balance_ac_positive_violation(pm, nw=0)         
+    variable_power_balance_dc_positive_violation(pm, nw=0)         
 
     _PM.constraint_model_voltage(pm, nw=0)
-    _PMACDC.constraint_voltage_dc(pm, nw=0)               # Update_GM
+    _PMACDC.constraint_voltage_dc(pm, nw=0)               
     
-    for i in _PM.ids(pm, nw=0, :ref_buses)                  # Update_GM_PMSC
+    for i in _PM.ids(pm, nw=0, :ref_buses)                  
         _PM.constraint_theta_ref(pm, i, nw=0)
     end
 
-    for i in _PM.ids(pm, nw=0, :bus)                        # Update_GM_PMSC
+    for i in _PM.ids(pm, nw=0, :bus)                        
         constraint_power_balance_ac_soft(pm, i, nw=0)
     end
 
