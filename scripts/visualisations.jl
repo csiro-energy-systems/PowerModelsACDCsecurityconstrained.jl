@@ -1,61 +1,61 @@
 
 ############################################# Base Case Plots ################################################
 
-vm_ac_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"]))
-va_ac_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"]))
-vm_dc_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["busdc"]))
-pg_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"]))
-qg_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"]))
-x = 1 : 1 : length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"])
-y = 1 : 1 : length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"])
+vm_ac_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"]))
+va_ac_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"]))
+vm_dc_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["busdc"]))
+pg_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"]))
+qg_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"]))
+x = 1 : 1 : length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"])
+y = 1 : 1 : length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"])
 pg_u = zeros(Float64, length(data["gen"]))
 pg_l = zeros(Float64, length(data["gen"]))
 qg_u = zeros(Float64, length(data["gen"]))
 qg_l = zeros(Float64, length(data["gen"]))
-pf_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-pt_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"])) 
-qf_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-qt_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-sf_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-st_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-If_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-fbus = zeros(Int64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-s_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-s_u = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-s_l = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-pfdc_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-ptdc_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-sdc_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-sdc_u = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-sdc_l = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-ploss_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-qloss_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-pdcloss_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-sloss_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]))
-fbusdc_b = zeros(Int64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
-Ifdc_b = zeros(Float64, length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]))
+pf_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+pt_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"])) 
+qf_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+qt_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+sf_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+st_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+If_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+fbus = zeros(Int64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+s_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+s_u = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+s_l = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+pfdc_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+ptdc_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+sdc_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+sdc_u = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+sdc_l = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+ploss_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+qloss_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+pdcloss_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+sloss_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]))
+fbusdc_b = zeros(Int64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
+Ifdc_b = zeros(Float64, length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]))
 for i=1:length(data["gen"])
     pg_u[i] = data["gen"]["$i"]["pmax"]
     pg_l[i] = data["gen"]["$i"]["pmin"]
     qg_u[i] = data["gen"]["$i"]["qmax"]
     qg_l[i] = data["gen"]["$i"]["qmin"]
 end
-for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"])   
-    vm_ac_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"]["$i"]["vm"]
-    va_ac_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["bus"]["$i"]["va"]
+for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"])   
+    vm_ac_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"]["$i"]["vm"]
+    va_ac_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["bus"]["$i"]["va"]
 end
-for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["busdc"])   
-    vm_dc_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
+for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["busdc"])   
+    vm_dc_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
 end
-for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"])   
-    pg_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
-    qg_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["gen"]["$i"]["qg"]
+for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"])   
+    pg_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+    qg_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["gen"]["$i"]["qg"]
 end
-for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"])
-    pf_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]["$i"]["pf"]
-    pt_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]["$i"]["pt"]
-    qf_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]["$i"]["qf"]
-    qt_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"]["$i"]["qt"]
+for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"])
+    pf_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]["$i"]["pf"]
+    pt_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]["$i"]["pt"]
+    qf_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]["$i"]["qf"]
+    qt_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"]["$i"]["qt"]
     sf_b[i] = sqrt(pf_b[i]^2 + qf_b[i]^2)
     st_b[i] = sqrt(pt_b[i]^2 + qt_b[i]^2)
     s_u[i] = data["branch"]["$i"]["rate_c"]
@@ -79,9 +79,9 @@ for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branch"])
     end
     sloss_b[i] = sqrt(ploss_b[i]^2 + qloss_b[i]^2)
 end
-    for i=1:length(result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"])
-    pfdc_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pf"]
-    ptdc_b[i] = result_ACDCscopf2["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pt"]
+    for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"])
+    pfdc_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pf"]
+    ptdc_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pt"]
     sdc_u[i] = data["branchdc"]["$i"]["rateC"]
     fbusdc_b[i] = Int(data["branchdc"]["$i"]["fbusdc"])
    
@@ -189,42 +189,42 @@ _P.savefig("If_Ifdc_b_plot.png")
     m = 1
     n = 1
    for i = 1 : n     #length(data["gen_contingencies"]) + length( data["branch_contingencies"]) + length(data["branchdc_contingencies"])
-        vm_ac_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["bus"]))
-        vm_dc_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["busdc"]))
-        pg_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["gen"]))
-        qg_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["gen"]))
-        pf_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        pt_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        qf_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        qt_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        sf_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        st_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        s_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        pfdc_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]))
-        ptdc_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]))
-        sdc_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]))
-        fbus_c = zeros(Int64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        If_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]))
-        fbusdc_c = zeros(Int64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]))
-        Ifdc_c = zeros(Float64, length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]))
+        vm_ac_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["bus"]))
+        vm_dc_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["busdc"]))
+        pg_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["gen"]))
+        qg_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["gen"]))
+        pf_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        pt_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        qf_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        qt_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        sf_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        st_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        s_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        pfdc_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]))
+        ptdc_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]))
+        sdc_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]))
+        fbus_c = zeros(Int64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        If_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]))
+        fbusdc_c = zeros(Int64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]))
+        Ifdc_c = zeros(Float64, length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]))
 
-        for j=1:length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["bus"])   
-            vm_ac_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["bus"]["$j"]["vm"]
+        for j=1:length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["bus"])   
+            vm_ac_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["bus"]["$j"]["vm"]
         end
-        for j=1:length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["busdc"]) 
-            vm_dc_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["busdc"]["$j"]["vm"]
+        for j=1:length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["busdc"]) 
+            vm_dc_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["busdc"]["$j"]["vm"]
         end
-        for j=1:length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["gen"])   
-            pg_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["gen"]["$j"]["pg"]
-            qg_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["gen"]["$j"]["qg"]
+        for j=1:length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["gen"])   
+            pg_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["gen"]["$j"]["pg"]
+            qg_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["gen"]["$j"]["qg"]
         end
-        for j=1:length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"])   
-            if haskey(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"], "$j")
+        for j=1:length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"])   
+            if haskey(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"], "$j")
 
-                pf_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["pf"]
-                pt_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["pt"]
-                qf_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["qf"]
-                qt_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["qt"]
+                pf_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["pf"]
+                pt_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["pt"]
+                qf_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["qf"]
+                qt_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branch"]["$j"]["qt"]
                 sf_c[j] = sqrt(pf_c[j]^2 + qf_c[j]^2)
                 st_c[j] = sqrt(pt_c[j]^2 + qt_c[j]^2)
                 if sf_c[j] > st_c[j]
@@ -243,10 +243,10 @@ _P.savefig("If_Ifdc_b_plot.png")
                 st_c[j] = 0
             end
         end
-        for j=1:length(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"])
-            if haskey(result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"], "$j")
-                pfdc_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]["$j"]["pf"]
-                ptdc_c[j] = result_ACDCscopf2[string(m)]["sol_c"]["c$i"]["branchdc"]["$j"]["pt"]
+        for j=1:length(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"])
+            if haskey(result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"], "$j")
+                pfdc_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]["$j"]["pf"]
+                ptdc_c[j] = result_ACDC_scopf_exact[string(m)]["sol_c"]["c$i"]["branchdc"]["$j"]["pt"]
                 if pfdc_c[j] > ptdc_c[j]
                     sdc_c[j] = pfdc_c[j]
                 else
@@ -307,46 +307,46 @@ _P.savefig("If_Ifdc_b_plot.png")
 
 ############################################# Final Solution Plots ################################################
 
-vm_ac_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["bus"]))
-va_ac_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["bus"]))
-vm_dc_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["busdc"]))
-pg_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["gen"]))
-qg_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["gen"]))
-pf_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-pt_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-qf_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-qt_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-sf_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-st_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-s_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-pfdc_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-ptdc_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-sdc_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-fbus_f = zeros(Int64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-If_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-fbusdc_f = zeros(Int64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-Ifdc_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-ploss_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-qloss_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
-pdcloss_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branchdc"]))
-sloss_f = zeros(Float64, length(result_ACDCscopf2["f"]["solution"]["branch"]))
+vm_ac_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["bus"]))
+va_ac_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["bus"]))
+vm_dc_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["busdc"]))
+pg_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["gen"]))
+qg_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["gen"]))
+pf_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+pt_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+qf_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+qt_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+sf_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+st_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+s_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+pfdc_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+ptdc_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+sdc_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+fbus_f = zeros(Int64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+If_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+fbusdc_f = zeros(Int64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+Ifdc_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+ploss_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+qloss_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
+pdcloss_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"]))
+sloss_f = zeros(Float64, length(result_ACDC_scopf_exact["f"]["solution"]["branch"]))
 
-for i=1:length(result_ACDCscopf2["f"]["solution"]["bus"])   
-    vm_ac_f[i] = result_ACDCscopf2["f"]["solution"]["bus"]["$i"]["vm"]
-    va_ac_f[i] = result_ACDCscopf2["f"]["solution"]["bus"]["$i"]["va"]
+for i=1:length(result_ACDC_scopf_exact["f"]["solution"]["bus"])   
+    vm_ac_f[i] = result_ACDC_scopf_exact["f"]["solution"]["bus"]["$i"]["vm"]
+    va_ac_f[i] = result_ACDC_scopf_exact["f"]["solution"]["bus"]["$i"]["va"]
 end
-for i=1:length(result_ACDCscopf2["f"]["solution"]["busdc"])   
-    vm_dc_f[i] = result_ACDCscopf2["f"]["solution"]["busdc"]["$i"]["vm"]
+for i=1:length(result_ACDC_scopf_exact["f"]["solution"]["busdc"])   
+    vm_dc_f[i] = result_ACDC_scopf_exact["f"]["solution"]["busdc"]["$i"]["vm"]
 end
-for i=1:length(result_ACDCscopf2["f"]["solution"]["gen"])   
-    pg_f[i] = result_ACDCscopf2["f"]["solution"]["gen"]["$i"]["pg"]
-    qg_f[i] = result_ACDCscopf2["f"]["solution"]["gen"]["$i"]["qg"]
+for i=1:length(result_ACDC_scopf_exact["f"]["solution"]["gen"])   
+    pg_f[i] = result_ACDC_scopf_exact["f"]["solution"]["gen"]["$i"]["pg"]
+    qg_f[i] = result_ACDC_scopf_exact["f"]["solution"]["gen"]["$i"]["qg"]
 end
-for i=1:length(result_ACDCscopf2["f"]["solution"]["branch"])
-    pf_f[i] = result_ACDCscopf2["f"]["solution"]["branch"]["$i"]["pf"]
-    pt_f[i] = result_ACDCscopf2["f"]["solution"]["branch"]["$i"]["pt"]
-    qf_f[i] = result_ACDCscopf2["f"]["solution"]["branch"]["$i"]["qf"]
-    qt_f[i] = result_ACDCscopf2["f"]["solution"]["branch"]["$i"]["qt"]
+for i=1:length(result_ACDC_scopf_exact["f"]["solution"]["branch"])
+    pf_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branch"]["$i"]["pf"]
+    pt_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branch"]["$i"]["pt"]
+    qf_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branch"]["$i"]["qf"]
+    qt_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branch"]["$i"]["qt"]
     sf_f[i] = sqrt(pf_f[i]^2 + qf_f[i]^2)
     st_f[i] = sqrt(pt_f[i]^2 + qt_f[i]^2)
     
@@ -370,9 +370,9 @@ for i=1:length(result_ACDCscopf2["f"]["solution"]["branch"])
     end
     sloss_f[i] = sqrt(ploss_f[i]^2 + qloss_f[i]^2)
 end
-for i=1:length(result_ACDCscopf2["f"]["solution"]["branchdc"])
-    pfdc_f[i] = result_ACDCscopf2["f"]["solution"]["branchdc"]["$i"]["pf"]
-    ptdc_f[i] = result_ACDCscopf2["f"]["solution"]["branchdc"]["$i"]["pt"]
+for i=1:length(result_ACDC_scopf_exact["f"]["solution"]["branchdc"])
+    pfdc_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branchdc"]["$i"]["pf"]
+    ptdc_f[i] = result_ACDC_scopf_exact["f"]["solution"]["branchdc"]["$i"]["pt"]
     
     fbusdc_f[i] = Int(data["branchdc"]["$i"]["fbusdc"])
    
@@ -465,11 +465,11 @@ sm_cont = zeros(Float64, 51)
 smdc_cont = zeros(Float64, 51)
 for i=1:51,
     contingency_ids[i] = i
-    vm_cont[i] = result_ACDCscopf2["8"]["sol_c"]["vio_c$i"][:vm]
-    pg_cont[i] = result_ACDCscopf2["8"]["sol_c"]["vio_c$i"][:pg]
-    qg_cont[i]= result_ACDCscopf2["8"]["sol_c"]["vio_c$i"][:qg]
-    sm_cont[i] = result_ACDCscopf2["8"]["sol_c"]["vio_c$i"][:sm]
-    smdc_cont[i] = result_ACDCscopf2["8"]["sol_c"]["vio_c$i"][:smdc]
+    vm_cont[i] = result_ACDC_scopf_exact["8"]["sol_c"]["vio_c$i"][:vm]
+    pg_cont[i] = result_ACDC_scopf_exact["8"]["sol_c"]["vio_c$i"][:pg]
+    qg_cont[i]= result_ACDC_scopf_exact["8"]["sol_c"]["vio_c$i"][:qg]
+    sm_cont[i] = result_ACDC_scopf_exact["8"]["sol_c"]["vio_c$i"][:sm]
+    smdc_cont[i] = result_ACDC_scopf_exact["8"]["sol_c"]["vio_c$i"][:smdc]
 end
 contingency_ids[49] = 101
 contingency_ids[50] = 102

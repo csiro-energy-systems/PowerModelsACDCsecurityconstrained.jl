@@ -16,7 +16,7 @@ function variable_branch_thermal_limit_violation_from(pm::_PM.AbstractPowerModel
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :branch, :bf_vio_fr, bf_vio_fr)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branch, :bf_vio_fr, _PM.ids(pm, nw, :branch), bf_vio_fr)
 end
 
 function variable_branch_thermal_limit_violation_to(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -32,7 +32,7 @@ function variable_branch_thermal_limit_violation_to(pm::_PM.AbstractPowerModel; 
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :branch, :bf_vio_to, bf_vio_to)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branch, :bf_vio_to, _PM.ids(pm, nw, :branch), bf_vio_to)
 end
 
 
@@ -54,7 +54,7 @@ function variable_branchdc_thermal_limit_violation_from(pm::_PM.AbstractPowerMod
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :branchdc, :bdcf_vio_fr, bdcf_vio_fr)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branchdc, :bdcf_vio_fr, _PM.ids(pm, nw, :branchdc), bdcf_vio_fr)
 end 
 
 function variable_branchdc_thermal_limit_violation_to(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -69,7 +69,7 @@ function variable_branchdc_thermal_limit_violation_to(pm::_PM.AbstractPowerModel
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :branchdc, :bdcf_vio_to, bdcf_vio_to)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branchdc, :bdcf_vio_to, _PM.ids(pm, nw, :branchdc), bdcf_vio_to)
 end
 
 
@@ -90,7 +90,7 @@ function variable_power_balance_ac_positive_violation_real(pm::_PM.AbstractPower
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :bus, :pb_ac_pos_vio, pb_ac_pos_vio)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :pb_ac_pos_vio, _PM.ids(pm, nw, :bus), pb_ac_pos_vio)
 end 
 
 function variable_power_balance_ac_positive_violation_imag(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -104,7 +104,7 @@ function variable_power_balance_ac_positive_violation_imag(pm::_PM.AbstractPower
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :bus, :qb_ac_pos_vio, qb_ac_pos_vio)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :qb_ac_pos_vio, _PM.ids(pm, nw, :bus), qb_ac_pos_vio)
 end
 
 
@@ -121,5 +121,5 @@ function variable_power_balance_dc_positive_violation(pm::_PM.AbstractPowerModel
         end
     end
 
-    report && _PM.sol_component_value(pm, nw, :busdc, :pb_dc_pos_vio, pb_dc_pos_vio)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :busdc, :pb_dc_pos_vio, _PM.ids(pm, nw, :busdc), pb_dc_pos_vio)
 end 

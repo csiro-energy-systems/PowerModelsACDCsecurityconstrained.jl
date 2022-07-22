@@ -9,6 +9,11 @@ using PowerModelsACDC
 using PowerModelsSecurityConstrained
 using PowerModelsACDCsecurityconstrained
 
+const PM = PowerModels
+const PM_acdc = PowerModelsACDC
+const PM_sc = PowerModelsSecurityConstrained
+const PM_acdc_sc = PowerModelsACDCsecurityconstrained
+
 
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)  
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
@@ -46,23 +51,22 @@ end
 
 
 ##
-PowerModelsACDC.process_additional_data!(data)
+PM_acdc.process_additional_data!(data)
 
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
-# result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
-# result = run_scopf_soft(multinetwork, model_type, optimizer; setting = setting)
 
-result_ACDCscopf2 = PowerModelsACDCsecurityconstrained.run_scopf_contigency_cuts(data, PowerModels.DCPPowerModel, lp_solver, setting, run_scopf)
+result_ACDC_scopf_exact = PM_acdc_sc.run_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf, nlp_solver, setting)
 
+result_ACDC_scopf_soft = PM_acdc_sc.run_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
 
 
 
 ############################################# Soft test ################################################
-#PowerModelsACDC.process_additional_data!(data)
-#result = PowerModelsACDC.run_acdcopf(data, ACPPowerModel, nlp_solver)
-#PowerModels.update_data!(data, result["solution"])
+#PM_acdc.process_additional_data!(data)
+#result = PM_acdc.run_acdcopf(data, ACPPowerModel, nlp_solver)
+#PM.update_data!(data, result["solution"])
 #cuts = PowerModelsACDCsecurityconstrained.check_c1_contingencies_branch_power_GM(data, nlp_solver, total_cut_limit=20, gen_flow_cuts=[], branch_flow_cuts=[])    # Filtering 
 #println(length(cuts.gen_cuts) + length(cuts.branch_cuts))
 #data["gen_flow_cuts"] = cuts.gen_cuts
