@@ -42,8 +42,6 @@ for i=1:length(data["gen"])
     data["gen"]["$i"]["model"] = 1
     data["gen"]["$i"]["pg"] = 0
     data["gen"]["$i"]["qg"] = 0
-    #data["gen"]["$i"]["pmin"] = 0
-    #data["gen"]["$i"]["qmin"] = -data["gen"]["$i"]["qmax"]
     data["gen"]["$i"]["ncost"] = 10
     data["gen"]["$i"]["cost"] = [0.114610934721, 148.906997825, 0.224657803731, 203.163028589, 0.33470467274, 257.869865285, 0.44475154175, 313.027507911, 0.5547984107589999, 368.635956469, 0.664845279769, 424.695210957, 0.774892148778, 481.205271377, 0.884939017788, 538.166137728, 0.9949858867970001, 595.57781001, 1.10503275581, 653.440288223]
     data["gen"]["$i"]["alpha"] = 1
@@ -56,11 +54,13 @@ PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
 
-result_ACDC_scopf_exact = PM_acdc_sc.run_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf, nlp_solver, setting)
+result_ACDC_scopf_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf, nlp_solver, setting)
 
-result_ACDC_scopf_soft = PM_acdc_sc.run_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
+result_ACDC_scopf_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf, lp_solver, setting)
 
+result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf_soft, lp_solver, setting)
 
 
 ############################################# Soft test ################################################

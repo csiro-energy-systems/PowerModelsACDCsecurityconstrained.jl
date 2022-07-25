@@ -80,11 +80,11 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
     end
 
 
-    smdc_vio = NaN                                                                        # Update_GM 
-    if haskey(solution, "branchdc")                                                             # Update_GM 
+    smdc_vio = NaN                                                                        
+    if haskey(solution, "branchdc")                                                            
         smdc_vio = 0.0
-        for (i,branchdc) in network["branchdc"]                                                  # Update_GM 
-            if branchdc["status"] != 0                                                     # Update_GM 
+        for (i,branchdc) in network["branchdc"]                                                
+            if branchdc["status"] != 0                                                  
                 branchdc_sol = solution["branchdc"][i]
 
                 s_fr = abs(branchdc_sol["pf"])                                                

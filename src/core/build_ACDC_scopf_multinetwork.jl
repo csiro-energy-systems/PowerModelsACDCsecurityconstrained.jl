@@ -1,15 +1,17 @@
 """
-transforms a contigency list into explicit multinetwork data with network 0
-being the base case
+This function transforms a contigency list into explicit multinetwork data including
+HVAC and HVDC grid with network 0 being the base case
+
 """
-function build_scopf_multinetwork(network::Dict{String,<:Any})          #Update_GM
+
+function build_ACDC_scopf_multinetwork(network::Dict{String,<:Any})         
     if _IM.ismultinetwork(network)
         error(_LOGGER, "build ACDC scopf can only be used on single networks")
     end
 
-    contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"])    #Update_GM
+    contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"])   
 
-    _PMSC.info(_LOGGER, "building scopf multi-network with $(contingencies+1) networks")
+    _PMSC.info(_LOGGER, "building ACDC scopf multi-network with $(contingencies+1) networks")
 
     if contingencies > 0
         mn_data = _PM.replicate(network, contingencies)
@@ -86,11 +88,11 @@ function build_scopf_multinetwork(network::Dict{String,<:Any})          #Update_
             network_id += 1
         end
 
-        for cont in base_network["branchdc_contingencies"]          #Update_GM
+        for cont in base_network["branchdc_contingencies"]         
             cont_nw = mn_data["nw"]["$(network_id)"]
             cont_nw["name"] = cont.label
-            cont_branchdc = cont_nw["branchdc"]["$(cont.idx)"]          #Update_GM
-            cont_branchdc["status"] = 0                                 #Update_GM
+            cont_branchdc = cont_nw["branchdc"]["$(cont.idx)"]        
+            cont_branchdc["status"] = 0                                 
 
             gen_buses = Set{Int}()
             for (i,gen) in cont_nw["gen"]
@@ -100,15 +102,15 @@ function build_scopf_multinetwork(network::Dict{String,<:Any})          #Update_
             end
             cont_nw["gen_buses"] = gen_buses
 
-            fr_busdc = cont_nw["busdc"]["$(cont_branchdc["fbusdc"])"]          #Update_GM
-            to_busdc = cont_nw["busdc"]["$(cont_branchdc["tbusdc"])"]          #Update_GM
+            fr_busdc = cont_nw["busdc"]["$(cont_branchdc["fbusdc"])"]          
+            to_busdc = cont_nw["busdc"]["$(cont_branchdc["tbusdc"])"]          
 
             cont_nw["response_gens"] = Set()
-            if haskey(cont_nw["area_gens"], fr_busdc["area"])                           #Update_GM
-                cont_nw["response_gens"] = cont_nw["area_gens"][fr_busdc["area"]]       #Update_GM
+            if haskey(cont_nw["area_gens"], fr_busdc["area"])                          
+                cont_nw["response_gens"] = cont_nw["area_gens"][fr_busdc["area"]]       
             end
-            if haskey(network["area_gens"], to_busdc["area"])                           #Update_GM
-                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][to_busdc["area"]])          #Update_GM
+            if haskey(network["area_gens"], to_busdc["area"])                           
+                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][to_busdc["area"]])         
             end
 
             network_id += 1

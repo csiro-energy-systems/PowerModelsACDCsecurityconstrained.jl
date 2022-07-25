@@ -1,3 +1,10 @@
+"""
+This function checks a given operating point against the contingencies to look
+for branch HVAC and HVDC flow violations. The ACDC Power Flow is used for flow
+simulation. It returns a list of contingencies where a violation is found.
+
+"""
+
 function check_contingency_violations(network, model_type, optimizer, setting;
     gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM

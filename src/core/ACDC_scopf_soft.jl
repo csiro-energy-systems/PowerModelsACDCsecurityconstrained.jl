@@ -1,14 +1,13 @@
 """
-An SCOPF formulation conforming to the ARPA-e GOC Challenge 1 specification.
-A DC power flow approximation is used. Power balance and line flow constraints
-are strictly enforced in the first stage.  Contingency branch flow constraints
-are enforced by PTDF cuts and penalized based on a conservative linear
-approximation of the formulation's specification.
+An SCOPF multi-period soft formulation for integrated HVAC and HVDC grid. It includes
+slack variables for AC and DC grid power balance and line thermal limit constraints, 
+which are minimized in the objective function.
 
-This formulation is used in conjunction with the contingency filters that
-generate PTDF cuts.s
+This formulation is best used in conjunction with the contingency filters that find
+violated contingencies in integrated HVAC and HVDC grid.
 
 """
+
 function run_scopf_soft(data, model_constructor, solver; kwargs...)
     # _PMACDC.process_additional_data!(data)
     return _PM.run_model(data, model_constructor, solver, build_scopf_soft; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)
@@ -21,7 +20,6 @@ Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 ""
 function build_scopf_soft(pm::_PM.AbstractPowerModel)
     
-
     _PM.variable_bus_voltage(pm, nw=0)
     _PM.variable_gen_power(pm, nw=0)
     _PM.variable_branch_power(pm, nw=0)    
@@ -46,7 +44,7 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
         constraint_power_balance_ac_soft(pm, i, nw=0)
     end
 
-    for i in _PM.ids(pm, nw=0, :branch)                     # Update_GM_PMSC
+    for i in _PM.ids(pm, nw=0, :branch)                     
         _PM.constraint_ohms_yt_from(pm, i, nw=0)
         _PM.constraint_ohms_yt_to(pm, i, nw=0)
 
@@ -57,40 +55,40 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
     end
 
 
-    for i in _PM.ids(pm, nw=0, :busdc)                                                # Update_GM now nw=0, otherwise if nw for loop
-        constraint_power_balance_dc_soft(pm, i, nw=0)                                      # Update_GM
-    end                                                                                # Update_GM
-    for i in _PM.ids(pm, nw=0, :branchdc)                                              # Update_GM
-        constraint_ohms_dc_branch_soft(pm, i, nw=0)                                 # Update_GM
-    end                                                                                # Update_GM
-    for i in _PM.ids(pm, nw=0, :convdc)                                                # Update_GM
-        _PMACDC.constraint_converter_losses(pm, i, nw=0)                               # Update_GM
-        _PMACDC.constraint_converter_current(pm, i, nw=0)                              # Update_GM
-        _PMACDC.constraint_conv_transformer(pm, i, nw=0)                               # Update_GM
-        _PMACDC.constraint_conv_reactor(pm, i, nw=0)                                   # Update_GM
-        _PMACDC.constraint_conv_filter(pm, i, nw=0)                                    # Update_GM
-        if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1          # Update_GM      
-            _PMACDC.constraint_conv_firing_angle(pm, i, nw=0)                                     # Update_GM
-        end                                                                            # Update_GM
+    for i in _PM.ids(pm, nw=0, :busdc)                                                # now nw=0, otherwise if nw for loop
+        constraint_power_balance_dc_soft(pm, i, nw=0)                                      
+    end                                                                                
+    for i in _PM.ids(pm, nw=0, :branchdc)                                             
+        constraint_ohms_dc_branch_soft(pm, i, nw=0)                                 
+    end                                                                                
+    for i in _PM.ids(pm, nw=0, :convdc)                                                
+        _PMACDC.constraint_converter_losses(pm, i, nw=0)                               
+        _PMACDC.constraint_converter_current(pm, i, nw=0)                              
+        _PMACDC.constraint_conv_transformer(pm, i, nw=0)                               
+        _PMACDC.constraint_conv_reactor(pm, i, nw=0)                                 
+        _PMACDC.constraint_conv_filter(pm, i, nw=0)                                    
+        if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1                
+            _PMACDC.constraint_conv_firing_angle(pm, i, nw=0)                                     
+        end                                                                            
     end
                                                                                   
 
-    contigency_ids = [id for id in _PM.nw_ids(pm) if id != 0]         # Update_GM_PMSC
+    contigency_ids = [id for id in _PM.nw_ids(pm) if id != 0]         
     
     for nw in contigency_ids
 
         _PM.variable_bus_voltage(pm, nw=nw, bounded=false)
         _PM.variable_gen_power(pm, nw=nw, bounded=false)
         _PM.variable_branch_power(pm, nw=nw)
-        _PMACDC.variable_active_dcbranch_flow(pm, nw=nw)       # Update_GM
-        _PMACDC.variable_dcbranch_current(pm, nw=nw)           # Update_GM
-        _PMACDC.variable_dc_converter(pm, nw=nw)               # Update_GM
-        _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)   # Update_GM
+        _PMACDC.variable_active_dcbranch_flow(pm, nw=nw)       
+        _PMACDC.variable_dcbranch_current(pm, nw=nw)           
+        _PMACDC.variable_dc_converter(pm, nw=nw)               
+        _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)   
 
-        variable_branch_thermal_limit_violation(pm, nw=nw)         # Update_GM
-        variable_branchdc_thermal_limit_violation(pm, nw=nw)         # Update_GM
-        variable_power_balance_ac_positive_violation(pm, nw=nw)         # Update_GM
-        variable_power_balance_dc_positive_violation(pm, nw=nw)         # Update_GM
+        variable_branch_thermal_limit_violation(pm, nw=nw)         
+        variable_branchdc_thermal_limit_violation(pm, nw=nw)         
+        variable_power_balance_ac_positive_violation(pm, nw=nw)         
+        variable_power_balance_dc_positive_violation(pm, nw=nw)         
 
         _PMACDC.constraint_voltage_dc(pm, nw=nw)
 
@@ -98,13 +96,13 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
         _PM.constraint_model_voltage(pm, nw=nw)
 
-        for i in _PM.ids(pm, nw=nw, :ref_buses)           # Update_GM_PMSC
+        for i in _PM.ids(pm, nw=nw, :ref_buses)           
             _PM.constraint_theta_ref(pm, i, nw=nw)
         end
 
         gen_buses = _PM.ref(pm, nw=nw, :gen_buses)
-        for i in _PM.ids(pm, nw=nw, :bus)                 # Update_GM_PMSC
-            constraint_power_balance_ac_soft(pm, i, nw=nw)       # Update_GM
+        for i in _PM.ids(pm, nw=nw, :bus)                 
+            constraint_power_balance_ac_soft(pm, i, nw=nw)       
 
             # if a bus has active generators, fix the voltage magnitude to the base case
             if i in gen_buses
@@ -126,7 +124,7 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
         end
 
 
-        for i in _PM.ids(pm, nw=nw, :branch)                      # Update_GM_PMSC
+        for i in _PM.ids(pm, nw=nw, :branch)                     
             _PM.constraint_ohms_yt_from(pm, i, nw=nw)
             _PM.constraint_ohms_yt_to(pm, i, nw=nw)
 
@@ -137,21 +135,21 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
         end
 
 
-        for i in _PM.ids(pm, nw=nw, :busdc)                                                # Update_GM now nw=0, otherwise if nw for loop
-            constraint_power_balance_dc_soft(pm, i, nw=nw)                                      # Update_GM
-        end                                                                                # Update_GM
-        for i in _PM.ids(pm, nw=nw, :branchdc)                                              # Update_GM
-            constraint_ohms_dc_branch_soft(pm, i, nw=nw)                                 # Update_GM
-        end                                                                                # Update_GM
-        for i in _PM.ids(pm, nw=nw, :convdc)                                                # Update_GM
-            _PMACDC.constraint_converter_losses(pm, i, nw=nw)                               # Update_GM
-            _PMACDC.constraint_converter_current(pm, i, nw=nw)                              # Update_GM
-            _PMACDC.constraint_conv_transformer(pm, i, nw=nw)                               # Update_GM
-            _PMACDC.constraint_conv_reactor(pm, i, nw=nw)                                   # Update_GM
-            _PMACDC.constraint_conv_filter(pm, i, nw=nw)                                    # Update_GM
-            if pm.ref[:it][:pm][:nw][nw][:convdc][i]["islcc"] == 1          # Update_GM      
-                _PMACDC.constraint_conv_firing_angle(pm, i, nw=nw)                                     # Update_GM
-            end                                                                            # Update_GM
+        for i in _PM.ids(pm, nw=nw, :busdc)                                                # now nw=0, otherwise if nw for loop
+            constraint_power_balance_dc_soft(pm, i, nw=nw)                                     
+        end                                                                               
+        for i in _PM.ids(pm, nw=nw, :branchdc)                                             
+            constraint_ohms_dc_branch_soft(pm, i, nw=nw)                                
+        end                                                                                
+        for i in _PM.ids(pm, nw=nw, :convdc)                                               
+            _PMACDC.constraint_converter_losses(pm, i, nw=nw)                              
+            _PMACDC.constraint_converter_current(pm, i, nw=nw)                             
+            _PMACDC.constraint_conv_transformer(pm, i, nw=nw)                              
+            _PMACDC.constraint_conv_reactor(pm, i, nw=nw)                                  
+            _PMACDC.constraint_conv_filter(pm, i, nw=nw)                                   
+            if pm.ref[:it][:pm][:nw][nw][:convdc][i]["islcc"] == 1            
+                _PMACDC.constraint_conv_firing_angle(pm, i, nw=nw)                                    
+            end                                                                           
         end
  
     end
@@ -162,7 +160,6 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
     # explicit network id needed because of conductor-less
     pg_cost = _PMSC.var(pm, 0, :pg_cost)
 
-    #length(nw_ref(:branch) )
     JuMP.@objective(pm.model, Min,
         sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
         sum(

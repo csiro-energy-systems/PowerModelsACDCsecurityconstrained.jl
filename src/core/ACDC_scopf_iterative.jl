@@ -1,15 +1,15 @@
-
+"""
+Solves an SCOPF problem for integrated HVAC and HVDC grid by iteratively checking for
+violated contingencies and resolving until a fixed-point is reached.
 
 """
-Solves an ACDC SCOPF problem by iteratively checking for violated contingencies and 
-resolving until a fixed-point is reached
-"""
-function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)    #Update_GM
+function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)   
     if _IM.ismultinetwork(network)
-        error(_LOGGER, "run_scopf_contigency_cuts can only be used on single networks")
+        error(_LOGGER, "run_ACDC_scopf_contigency_cuts can only be used on single networks")
     end
 
     time_start = time()
+    result_scopf = Dict{String,Any}()
     network["gen_cont_vio"] = 0.0
     network["branch_cont_vio"] = 0.0
     network["branchdc_cont_vio"] = 0.0
@@ -21,8 +21,9 @@ function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type
     network_active["branch_contingencies"] = []
     network_active["branchdc_contingencies"] = []
 
-    multinetwork = build_scopf_multinetwork(network_active)
+    multinetwork = build_ACDC_scopf_multinetwork(network_active)
     result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
+    result_scopf["base"] = result  
     
     if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
         error(_LOGGER, "base-case ACDC SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
@@ -38,14 +39,13 @@ function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type
 
     iteration = 1
     contingencies_found = 1
-    result_scopf = Dict{String,Any}()
     while contingencies_found > 0
         time_start_iteration = time()
 
-        contingencies = check_contingency_violations(network_base, model_type, optimizer, setting, contingency_limit=iteration)    #Update_GM
+        contingencies = check_contingency_violations(network_base, model_type, optimizer, setting, contingency_limit=iteration)    
         #println(contingencies)
         result_scopf["$iteration"] = Dict{String,Any}()
-        result_scopf["$iteration"]["sol_c"] = contingencies.results_c                                        # result dictionary_GM
+        result_scopf["$iteration"]["sol_c"] = contingencies.results_c                               # post-contingency results 
 
         contingencies_found = 0
         #append!(network_active["gen_contingencies"], contingencies.gen_contingencies)
@@ -82,10 +82,10 @@ function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type
         end
 
         if contingencies_found <= 0
-            _PMSC.info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")           #Update_GM
+            _PMSC.info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")          
             break
         else
-            _PMSC.info(_LOGGER, "found $(contingencies_found) new contingencies with violations")           #Update_GM
+            _PMSC.info(_LOGGER, "found $(contingencies_found) new contingencies with violations")           
         end
 
 
@@ -93,7 +93,7 @@ function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type
 
         time_solve_start = time()
         #_PMACDC.fix_data!(network_active)
-        multinetwork = build_scopf_multinetwork(network_active)
+        multinetwork = build_ACDC_scopf_multinetwork(network_active)
         result = run_scopf_prob(multinetwork, model_type, optimizer; setting = setting)
         # result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
         # result = run_scopf_soft(multinetwork, model_type, optimizer; setting = setting)
@@ -124,6 +124,6 @@ function run_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type
 
     result["solution"] = solution
     result["iterations"] = iteration
-    result_scopf["final"] = result                                                       # result dictionary_GM
+    result_scopf["final"] = result                                                      
     return result_scopf
 end

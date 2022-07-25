@@ -1,3 +1,14 @@
+"""
+An SCOPF multi-period formulation for integrated HVAC and HVDC grid. It includes AC
+and DC grid power balance, converter station, node voltage, and branch constraints
+both in the base stage as well as the contingency stages. Additionally, the contingency 
+stages include generator response constraints.
+
+This formulation is best used in conjunction with the contingency filters that find
+violated contingencies in integrated HVAC and HVDC grid.
+
+"""
+
 function run_scopf(data, model_constructor, solver; kwargs...)
     # _PMACDC.process_additional_data!(data)
     return _PM.run_model(data, model_constructor, solver, build_scopf; ref_extensions = [_PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)

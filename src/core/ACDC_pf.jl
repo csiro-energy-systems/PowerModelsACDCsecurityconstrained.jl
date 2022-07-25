@@ -1,3 +1,7 @@
+"""
+An OPF formulation for integrated HVAC and HVDC grid.
+
+"""
 export run_acdcpf
 
 ""

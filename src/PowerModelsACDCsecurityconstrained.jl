@@ -25,12 +25,12 @@ module PowerModelsACDCsecurityconstrained
     include("core/variables.jl")
 
 
-    include("core/scopf_iterative.jl")
+    include("core/ACDC_scopf_iterative.jl")
     
     include("core/ACDC_scopf.jl")
     include("core/ACDC_scopf_soft.jl")
 
-    # include("core/ACDC_pf.jl")
+  
     include("core/contingency_filters.jl")
     include("core/conting_c.jl")
     include("core/CalVio.jl")
@@ -38,10 +38,11 @@ module PowerModelsACDCsecurityconstrained
     include("core/constraint_template.jl")
     include("core/constraint.jl")
 
-    include("core/build_scopf_multinetwork.jl")
+    include("core/build_ACDC_scopf_multinetwork.jl")
     
-    include("core/conting_soft_v.jl")
-    include("core/PF_convex_cuts.jl")
+    # include("core/ACDC_pf.jl")
+    # include("core/conting_soft_v.jl")
+    # include("core/PF_convex_cuts.jl")
     
 
 end # module
