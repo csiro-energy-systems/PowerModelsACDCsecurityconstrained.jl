@@ -1,4 +1,4 @@
-function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
+function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
     vm_vio = 0.0
     for (i,bus) in network["bus"]
         if bus["bus_type"] != 4
@@ -79,26 +79,19 @@ function calc_c1_violations_GM(network::Dict{String,<:Any}, solution::Dict{Strin
         end
     end
 
-    ###################################################################   # Update_GM   ###############################################################
 
-    smdc_vio = NaN                                                                        # Update_GM 
-    if haskey(solution, "branchdc")                                                             # Update_GM 
+    smdc_vio = NaN                                                                        
+    if haskey(solution, "branchdc")                                                            
         smdc_vio = 0.0
-        for (i,branchdc) in network["branchdc"]                                                  # Update_GM 
-            if branchdc["status"] != 0                                                     # Update_GM 
+        for (i,branchdc) in network["branchdc"]                                                
+            if branchdc["status"] != 0                                                  
                 branchdc_sol = solution["branchdc"][i]
 
                 s_fr = abs(branchdc_sol["pf"])                                                
                 s_to = abs(branchdc_sol["pt"])
 
-                #if !isnan(branchdc_sol["qf"]) && !isnan(branchdc_sol["qt"])
-                #    s_fr = sqrt(branchdc_sol["pf"]^2 + branchdc_sol["qf"]^2)
-                #    s_to = sqrt(branchdc_sol["pt"]^2 + branchdc_sol["qt"]^2)
-                #end
-
                 # note true model is rateC
                 #vio_flag = false
-                rate_keydc=rate_keydc/100;                           # Update_GM 
                 rating = branchdc[rate_keydc]
 
                 if s_fr > rating

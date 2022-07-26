@@ -26,10 +26,10 @@ mpc.bus = [
 ];
 
 %% generator data
-%	bus	Pg      Qg	Qmax	Qmin	Vg	mBase       status	Pmax	Pmin	pc1 pc2 qlcmin qlcmax qc2min qc2max ramp_agc ramp_10 ramp_30 ramp_q apf
+%	bus	Pg      Qg	Qmax	Qmin	Vg	   mBase    status	Pmax	Pmin	pc1 pc2 qlcmin qlcmax qc2min qc2max ramp_agc ramp_10 ramp_30 ramp_q apf
 mpc.gen = [
 	1	0       0	500      -500    1.06	100       1       250     10 0 0 0 0 0 0 0 0 0 0 0;
-  2	40      0	300      -300    1      100       1       300     10 0 0 0 0 0 0 0 0 0 0 0;
+    2	40      0	300      -300    1      100       1       300     10 0 0 0 0 0 0 0 0 0 0 0;
 ];
 
 %% branch data
@@ -82,7 +82,7 @@ mpc.branchdc = [
 %	2	startup	shutdown	n	c(n-1)	...	c0
 mpc.gencost = [
 	2	0	0	3	0  1	0;
-	2	0	0	3 0	 2	0;
+	2	0	0	3   0  2	0;
 ];
 
 % adds current ratings to branch matrix
