@@ -79,7 +79,7 @@ for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"])
     end
     sloss_b[i] = sqrt(ploss_b[i]^2 + qloss_b[i]^2)
 end
-    for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"])
+for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"])
     pfdc_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pf"]
     ptdc_b[i] = result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pt"]
     sdc_u[i] = data["branchdc"]["$i"]["rateC"]
