@@ -1,4 +1,4 @@
-function mpc = case5_acdc()
+function mpc = case5_acdc_scopf()
 %case 5 nodes    Power flow data for 5 bus, 2 generator case.
 %   Please see 'help caseformat' for details on the case file format.
 %
@@ -15,6 +15,12 @@ function mpc = case5_acdc()
 %% system MVA base
 mpc.baseMVA = 100;
 
+%% area data
+%	area	refbus
+mpc.areas = [
+	1;
+];
+
 %% bus data
 %	bus_i	type	Pd	Qd	Gs	Bs	area	Vm      Va	baseKV	zone	Vmax	Vmin
 mpc.bus = [
@@ -26,10 +32,10 @@ mpc.bus = [
 ];
 
 %% generator data
-%	bus	Pg      Qg	Qmax	Qmin	Vg	   mBase    status	Pmax	Pmin	pc1 pc2 qlcmin qlcmax qc2min qc2max ramp_agc ramp_10 ramp_30 ramp_q apf
+%	bus	Pg      Qg	Qmax	Qmin	Vg	   mBase    status	Pmax	Pmin	pc1 pc2 qlcmin qlcmax qc2min qc2max ramp_agc ramp_10 ramp_30 ramp_q apf alpha
 mpc.gen = [
-	1	0       0	500      -500    1.06	100       1       250     10 0 0 0 0 0 0 0 0 0 0 0;
-    2	40      0	300      -300    1      100       1       300     10 0 0 0 0 0 0 0 0 0 0 0;
+	1	0       0	500      -500    1.06	100       1       250     10 0 0 0 0 0 0 0 0 0 0 0 1;
+    2	40      0	300      -300    1      100       1       300     10 0 0 0 0 0 0 0 0 0 0 0 1;
 ];
 
 %% branch data
@@ -46,34 +52,46 @@ mpc.branch = [
   
 ];
 
+%column_names% 				prob    branch_id1 	 branch_id2 	branch_id3 		dcbranch_id1 	dcbranch_id2 		dcbranch_id3 	gen_id1 	gen_id2     gen_id3    dcconv_id1    dcconv_id2    dcconv_id3
+mpc.contingencies = [
+							 0.005    2 			0 				 0   			0 				0 					0   			0 			0 			0   		0 				0 			0;
+							 0.005    3 			0 				 0   			0 				0 					0   			0 			0 			0   		0 				0 			0;
+							 0.005    4 			0 				 0   			0 				0 					0   			0 			0 			0   		0 				0 			0;
+							 0.005    6 			0 				 0   			0 				0 					0   			0 			0 			0   		0 				0 			0;
+           					 0.005    7 			0 				 0   			0 				0 					0   			0 			0 			0   		0 				0 			0;
+         
+
+ ];
+ %
+
 
 %% dc grid topology
 %colunm_names% dcpoles
 mpc.dcpol=2;
 % numbers of poles (1=monopolar grid, 2=bipolar grid)
 %% bus data
-%column_names%   busdc_i grid    Pdc     Vdc     basekVdc    Vdcmax  Vdcmin  Cdc
+%column_names%   busdc_i grid    Pdc     Vdc     basekVdc    Vdcmax  Vdcmin  Cdc area
 mpc.busdc = [
-    1              1       0       1       345         1.1     0.9     0;
-    2              1       0       1       345         1.1     0.9     0;
-	3              1       0       1       345         1.1     0.9     0;
+    1              1       0       1       345         1.1     0.9     0        1;
+    2              1       0       1       345         1.1     0.9     0        1;
+	3              1       0       1       345         1.1     0.9     0        1;
 ];
 
 %% converters
 %column_names%   busdc_i busac_i type_dc type_ac P_g   Q_g islcc  Vtar    rtf xtf  transformer tm   bf filter    rc      xc  reactor   basekVac    Vmmax   Vmmin   Imax    status   LossA LossB  LossCrec LossCinv  droop      Pdcset    Vdcset  dVdcset Pacmax Pacmin Qacmax Qacmin
 mpc.convdc = [
-    1       2   1       1       -60    -40    0 1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050    -58.6274   1.0079   0 100 -100 50 -50;
-    2       3   2       1       0       0     0 1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0070     21.9013   1.0000   0 100 -100 50 -50;
-    3       5   1       1       35       5    0 1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050     36.1856   0.9978   0 100 -100 50 -50;
-%		3       5   1       1       35       5    0 1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     0       1.103 0.887  2.885    2.885      0.0050     36.1856   0.9978   0 100 -100 50 -50;
+                1       2       1       1       -60    -40    0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050    -58.6274   1.0079   0 100 -100 50 -50;
+                2       3       2       1       0       0     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0070     21.9013   1.0000   0 100 -100 50 -50;
+                3       5       1       1       35      5     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050     36.1856   0.9978   0 100 -100 50 -50;
+%		        3       5       1       1       35      5     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     0       1.103 0.887  2.885    2.885      0.0050     36.1856   0.9978   0 100 -100 50 -50;
 ];
 
 %% branches
 %column_names%   fbusdc  tbusdc  r      l        c   rateA   rateB   rateC   status
 mpc.branchdc = [
-    1       2       0.052   0   0    100     100     100     1;
-    2       3       0.052   0   0    100     100     100     1;
-    1       3       0.073   0   0    100     100     100     1;
+        1       2       0.052   0   0    100     100     100     1;
+        2       3       0.052   0   0    100     100     100     1;
+        1       3       0.073   0   0    100     100     100     1;
 %		1       3       0.073   0   0    100     100     100     0;
  ];
 

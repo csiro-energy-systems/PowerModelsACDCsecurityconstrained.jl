@@ -1,3 +1,108 @@
+#    " This function plots the results of the SCOPF base case, contingency stages and final case "
+function visualisations!(data, result)
+    
+
+    c = length(data["gen_contingencies"]) + length(data["branch_contingencies"]) + length(data["branchdc_contingencies"])
+    cs = length(result) - 2
+    #const _P = Plots
+
+    # voltage magnitude
+
+    vm_ac_b = [ result["base"]["solution"]["nw"]["0"]["bus"][i]["vm"] for (i, bus) in data["bus"] ]
+    vm_dc_b = [ result["base"]["solution"]["nw"]["0"]["busdc"][i]["vm"] for (i, busdc) in data["busdc"] ] 
+    vm_ac_c = [ [ result["$cs"]["sol_c"]["c$j"]["bus"][i]["vm"]  for (i, bus) in data["bus"] ] for j = 1 : c ]
+    vm_dc_c = [ [ result["$cs"]["sol_c"]["c$j"]["busdc"][i]["vm"]  for (i, bus) in data["busdc"] ] for j = 1 : c ]
+    vm_ac_f = [ result["final"]["solution"]["bus"][i]["vm"] for (i, bus) in data["bus"] ]
+    vm_dc_f = [ result["final"]["solution"]["busdc"][i]["vm"] for (i, busdc) in data["busdc"] ]
+    vm_lb = [ data["bus"][i]["vmin"] for (i, bus) in data["bus"] ]
+    vm_ub = [ data["bus"][i]["vmax"] for (i, bus) in data["bus"] ]
+
+    plot(vm_ac_b, seriestype = :line, linewidth = 2, color = "blue", label = "vm_ac_b", grid = true, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", ylims = [0.89,1.11], legend = :outertopright, legend_column = 2)        # framestyle = :box, title = "|V|"
+    plot!(vm_dc_b, seriestype = :line, linewidth = 2, color = "green", label = "vm_dc_b")
+    [ plot!(vm_ac_c[j], seriestype = :line, color = "orange", label = (if j==1 "vm_ac_c" else false end)) for j = 1 : c ]
+    [ plot!(vm_dc_c[j], seriestype = :line, color = "orange", label = (if j==1 "vm_dc_c" else false end)) for j = 1 : c ]
+    plot!(vm_ac_f, seriestype = :line, linewidth = 2, linestyle = :dash, color = "blue", label = "vm_ac_f")
+    plot!(vm_dc_f, seriestype = :line, linewidth = 2, linestyle = :dash, color = "green", label = "vm_dc_f")
+    plot!(vm_lb, seriestype = :line, color = "red", label = "vm_lb")
+    plot!(vm_ub, seriestype = :line, color = "red", label = "vm_ub")
+    xlabel!("Bus No.")
+    ylabel!("V (p.u)")
+    #savefig("vm_plot.png")
+
+    # line flows
+
+    sf_ac_b = sqrt.([ result["base"]["solution"]["nw"]["0"]["branch"][i]["pf"] for (i, branch) in data["branch"] ].^2 .+ [ result["base"]["solution"]["nw"]["0"]["branch"][i]["qf"] for (i, branch) in data["branch"] ].^2)
+    st_ac_b = sqrt.([ result["base"]["solution"]["nw"]["0"]["branch"][i]["pt"] for (i, branch) in data["branch"] ].^2 .+ [ result["base"]["solution"]["nw"]["0"]["branch"][i]["qt"] for (i, branch) in data["branch"] ].^2)
+    s_ac_b = max.(sf_ac_b, st_ac_b)
+    sf_dc_b = [ result["base"]["solution"]["nw"]["0"]["branchdc"][i]["pf"] for (i, branchdc) in data["branchdc"] ]
+    st_dc_b = [ result["base"]["solution"]["nw"]["0"]["branchdc"][i]["pt"] for (i, branchdc) in data["branchdc"] ] 
+    s_dc_b = max.(sf_dc_b, st_dc_b)
+    sf_ac_c = [ sqrt.([ [ result["$cs"]["sol_c"]["c$j"]["branch"][i]["pf"] for (i, branch) in result["$cs"]["sol_c"]["c$j"]["branch"] ] for j = 1 : c ][k].^2 .+ [ [ result["$cs"]["sol_c"]["c$j"]["branch"][i]["qf"] for (i, branch) in result["$cs"]["sol_c"]["c$j"]["branch"] ] for j = 1 : c ][k].^2) for k = 1 : c ]
+    st_ac_c = [ sqrt.([ [ result["$cs"]["sol_c"]["c$j"]["branch"][i]["pt"] for (i, branch) in result["$cs"]["sol_c"]["c$j"]["branch"] ] for j = 1 : c ][k].^2 .+ [ [ result["$cs"]["sol_c"]["c$j"]["branch"][i]["qt"] for (i, branch) in result["$cs"]["sol_c"]["c$j"]["branch"] ] for j = 1 : c ][k].^2) for k = 1 : c ]
+    s_ac_c = max.(sf_ac_c, st_ac_c)
+    sf_dc_c = [ [ result["$cs"]["sol_c"]["c$j"]["branchdc"][i]["pf"] for (i, branchdc) in result["$cs"]["sol_c"]["c$j"]["branchdc"] ] for j = 1 : c ]
+    st_dc_c = [ [ result["$cs"]["sol_c"]["c$j"]["branchdc"][i]["pt"] for (i, branchdc) in result["$cs"]["sol_c"]["c$j"]["branchdc"] ] for j = 1 : c ]
+    s_dc_c = max.(sf_dc_c, st_dc_c)
+    sf_ac_f = [ result["final"]["solution"]["branch"][i]["pf"] for (i, branch) in data["branch"] ]
+    st_ac_f = [ result["final"]["solution"]["branch"][i]["pt"] for (i, branch) in data["branch"] ]
+    s_ac_f = max.(sf_ac_f, st_ac_f)
+    sf_dc_f = [ result["final"]["solution"]["branchdc"][i]["pf"] for (i, branchdc) in data["branchdc"] ]
+    st_dc_f = [ result["final"]["solution"]["branchdc"][i]["pt"] for (i, branchdc) in data["branchdc"] ] 
+    s_dc_f = max.(sf_dc_f, st_dc_f)
+    s_ac_ub = [ data["branch"][i]["rate_c"] for (i, branch) in data["branch"] ]
+    s_dc_ub = [ data["branchdc"][i]["rateC"] for (i, branchdc) in data["branchdc"] ]
+    fbus_ac_b = [ Int(data["branch"][i]["f_bus"]) for (i, branch) in data["branch"] ]
+    If_ac_b = [ (sf_ac_b[i]*data["baseMVA"])/(vm_ac_b[fbus_ac_b[i]]*data["bus"][string(fbus[i])]["base_kv"]) for (i, branch) in enumerate(data["branch"]) ]
+    fbus_dc_b = [ Int(data["branchdc"][i]["fbusdc"]) for (i, branchdc) in data["branchdc"] ]
+    If_dc_b = [ (sf_dc_b[i]*data["baseMVA"])/(vm_dc_b[fbus_dc_b[i]]*data["busdc"][string(fbus_dc_b[i])]["basekVdc"]) for (i, branchdc) in enumerate(data["branchdc"]) ]
+    sloss_b = [ abs(sf_ac_b[i] - st_ac_b[i]) for (i, branch) in enumerate(data["branch"]) ]
+
+    plot(s_ac_b, seriestype = :line, linewidth = 2, color = "blue", label = "s_ac_b", grid = true, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", ylims = [-15.8,15.8], legend = :outertopright)        # framestyle = :box, title = "|V|"
+    plot!(s_dc_b, seriestype = :line, linewidth = 2, color = "green", label = "s_dc_b")
+    [ plot!(s_ac_c[j], seriestype = :line, color = "orange", label = (if j==1 "s_ac_c" else false end)) for j = 1 : c ]
+    [ plot!(s_dc_c[j], seriestype = :line, color = "orange", label = (if j==1 "s_dc_c" else false end)) for j = 1 : c ]
+    plot!(s_ac_f, seriestype = :line, linewidth = 2, linestyle = :dash, color = "blue", label = "s_ac_f")
+    plot!(s_dc_f, seriestype = :line, linewidth = 2, linestyle = :dash, color = "green", label = "s_dc_f")
+    plot!(s_ac_ub, seriestype = :line, color = "red", label = "s_ac_ub")
+    plot!(s_dc_ub, seriestype = :line, color = "red", label = "s_dc_ub")
+    plot!(-s_ac_ub, seriestype = :line, color = "red", label = "s_ac_lb")
+    plot!(-s_dc_ub, seriestype = :line, color = "red", label = "s_dc_lb")
+    xlabel!("Branch No.")
+    ylabel!("S (p.u)")
+    #_P.savefig("s_plot.png")
+
+
+    # Generator power
+
+    pg_b = [ result["base"]["solution"]["nw"]["0"]["gen"][i]["pg"] for (i, gen) in data["gen"] ]
+    qg_b = [ result["base"]["solution"]["nw"]["0"]["gen"][i]["qg"] for (i, busdc) in data["gen"] ] 
+    pg_c = [ [ result["$cs"]["sol_c"]["c$j"]["gen"][i]["pg"]  for (i, gen) in result["$cs"]["sol_c"]["c$j"]["gen"] ] for j = 1 : c ]
+    qg_c = [ [ result["$cs"]["sol_c"]["c$j"]["gen"][i]["qg"]  for (i, gen) in result["$cs"]["sol_c"]["c$j"]["gen"] ] for j = 1 : c ]
+    pg_f = [ result["final"]["solution"]["gen"][i]["pg"] for (i, gen) in data["gen"] ]
+    qg_f = [ result["final"]["solution"]["gen"][i]["qg"] for (i, gen) in data["gen"] ]
+    pg_lb = [ data["gen"][i]["pmin"] for (i, gen) in data["gen"] ]
+    pg_ub = [ data["gen"][i]["pmax"] for (i, gen) in data["gen"] ]
+    qg_lb = [ data["gen"][i]["qmin"] for (i, gen) in data["gen"] ]
+    qg_ub = [ data["gen"][i]["qmax"] for (i, gen) in data["gen"] ]
+
+    plot(pg_b, seriestype = :bar, bar_width = 0.2, color = "blue", label = "pg_b", grid = true, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", ylims = [], legend = :outertopright)        # framestyle = :box, title = "|V|"
+    plot!(qg_b, seriestype = :bar, bar_width = 0.2, color = "green", label = "qg_b")
+    [ plot!(pg_c[j], seriestype = :line, linestyle = :dash, color = "orange", label = (if j==1 "pg_c" else false end)) for j = 1 : c ]
+    [ plot!(qg_c[j], seriestype = :line, linestyle = :dash, color = "orange", label = (if j==1 "qg_c" else false end)) for j = 1 : c ]
+    plot!(pg_f, seriestype = :bar, bar_width = 0.4, color = "blue", label = "pg_f")
+    plot!(qg_f, seriestype = :bar, bar_width = 0.4, color = "green", label = "qg_f")
+    plot!(pg_ub, seriestype = :stepmid, color = "red", label = "pg_ub")
+    plot!(qg_ub, seriestype = :stepmid, color = "red", label = "qg_ub")
+    plot!(pg_lb, seriestype = :stepmid, color = "red", label = "pg_lb")
+    plot!(qg_lb, seriestype = :stepmid, color = "red", label = "qg_lb")
+    xlabel!("Gen No.")
+    ylabel!("P,Q (p.u)")
+    #_P.savefig("pq_plot.png")
+
+
+end
+
+
 
 ############################################# Base Case Plots ################################################
 
@@ -61,6 +166,8 @@ for i=1:length(result_ACDC_scopf_exact["b"]["solution"]["nw"]["0"]["branch"])
     s_u[i] = data["branch"]["$i"]["rate_c"]
     fbus[i] = Int(data["branch"]["$i"]["f_bus"])
     If_b[i] = (sf_b[i]*data["baseMVA"])/(vm_ac_b[fbus[i]]*data["bus"][string(fbus[i])]["base_kv"])
+#    " This function plots the results of the SCOPF base case, contingency stages and final case "
+function visualisations!(data, result)
     
     if sf_b[i] > st_b[i]
         s_b[i] = sf_b[i]

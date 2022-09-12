@@ -213,3 +213,8 @@ function check_contingency_violations(network, model_type, optimizer, setting;
 
     return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, results_c)
 end
+
+
+
+### Temporarily
+

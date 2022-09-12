@@ -1,11 +1,14 @@
 module PowerModelsACDCsecurityconstrained
 
+    import JuMP
     import PowerModels
+    #import StochasticPowerModels
     import PowerModelsACDC
     import PowerModelsSecurityConstrained
     import Memento
-    import JuMP
+    
     import InfrastructureModels
+    
     
     
 
@@ -13,6 +16,7 @@ module PowerModelsACDCsecurityconstrained
     const _PMSC = PowerModelsSecurityConstrained
     const _PMACDC = PowerModelsACDC
     const _IM = InfrastructureModels
+    #const _SPM = StochasticPowerModels
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
@@ -40,9 +44,12 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/build_ACDC_scopf_multinetwork.jl")
     
-    # include("core/ACDC_pf.jl")
-    # include("core/conting_soft_v.jl")
-    # include("core/PF_convex_cuts.jl")
+    include("core/ACDC_pf.jl")                  # TODO Is needed ?
+    include("core/conting_soft_v.jl")
+    include("core/ACDC_scopf_ptdf_dcdf_cuts.jl")
+    include("core/ACDC_scopf_ptdf_dcdf_cuts_iterative.jl")
+    #include("core/ACDC_R_pf.jl")
+    #include("core/ACDC_R_cv.jl")
     
 
 end # module

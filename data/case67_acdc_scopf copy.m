@@ -1,6 +1,9 @@
-% Case based on open source meshed AC/HVDC-Overlay test system
-% Sass,F., Sennewald,T. and Westermann, D., TU Ilmenau
-function mpc = case67acdc_scopf
+% An open source meshed AC/HVDC-Overlay test system
+% Sass, F., Sennewald, T., Marten, A.-K. and Westermann, D. (2017), 
+% Mixed AC high-voltage direct current benchmark test system for security constrained optimal power flow calculation. 
+% IET Gener. Transm. Distrib., 11: 447-455. 
+
+function mpc = case67_acdc_scopf
 mpc.version = '2';
 mpc.baseMVA = 100.0;
 

@@ -1,0 +1,30 @@
+using Pkg
+Pkg.activate("./scripts")
+
+using Ipopt
+using Cbc
+using JuMP
+using PowerModels
+#using StochasticPowerModels
+using PowerModelsACDC
+using PowerModelsSecurityConstrained
+using PowerModelsACDCsecurityconstrained
+
+
+nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "max_cpu_time" => 600.0, "tol" => 1e-8, "print_level" => 0)
+lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
+
+aux  = true
+case = "./data/case5_spm.m"
+
+result_acr = _SPM.run_sopf_acr(file, PowerModels.ACRPowerModel, nlp_solver, aux=aux, deg=deg)
+@test result_acr["termination_status"] == LOCALLY_SOLVED
+obj1 = result_acr["objective"]
+
+data  = _PM.parse_file(file)
+result_acr2 = _SPM.run_sopf_acr(data, _PM.ACRPowerModel, nlp_solver; aux=aux, deg=deg)
+@test result_acr2["termination_status"] == LOCALLY_SOLVED
+obj2 = result_acr2["objective"]
+
+sdata = _SPM.build_stochastic_data(data, deg)
+result_acr3 = _PM.run_model(sdata, _PM.ACRPowerModel, nlp_solver, _SPM.build_sopf_acr_with_aux; multinetwork=true, solution_processors=[_PM.sol_data_model!])

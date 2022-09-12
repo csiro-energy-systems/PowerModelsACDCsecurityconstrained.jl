@@ -67,7 +67,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
 
     gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
     branch_contingencies =  _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
-    branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
+    branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            
 
     ######################################################################################################################################################
     gen_cuts = []
@@ -114,18 +114,15 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         end
 
         try
-            solution =  run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]  # _PM.compute_dc_pf(network_lal)["solution"]       # Update_GM function acdcpf
+            solution =  run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]       
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
             continue
         end
 
-        #flow = _PM.calc_branch_flow_dc(network_lal)
-        #_PM.update_data!(network_lal, flow)
 
-
-        vio = calc_violations(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)             
 
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
@@ -137,36 +134,14 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
             if !haskey(gen_cuts_active, cont.label) || !(branch_vio.branch_id in gen_cuts_active[cont.label])
                 _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio)")
 
-                #am = _PM.calc_susceptance_matrix(network_lal)
-                #branch = network_lal["branch"]["$(branch_vio.branch_id)"]
-
-                #bus_injection = calc_c1_branch_ptdf_single(am, ref_bus_id, branch)
-                #bus injection in the violated branch at a rating level 1.0
-                bus_injection = ( branch_vio.sm_vio + network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"] ) / network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"]
-                cut = (gen_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, bus_injection=bus_injection)
+                branch = network_lal["branch"]["$(branch_vio.branch_id)"]
+                
+                ptdf_branch, dcdf_branch = calc_branch_ptdf_branchdc_dcdf_single(network_lal, ref_bus_id, branch)
+                
+                cut = (gen_cont_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, ptdf_branch=ptdf_branch, dcdf_branch=dcdf_branch)
                 push!(gen_cuts, cut)
             else
                 _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branch $(branch_vio.branch_id) with constraint flow violations $(branch_vio.sm_vio)")
-            end
-        end
-
-        if vio.smdc > sm_threshold                                                  # Update_GM 
-            branchdc_vios = branchdc_c1_violations_sorted(network_lal, network_lal)          # Update_GM 
-            branchdc_vio = branchdc_vios[1]                           # Update_GM 
-
-            if !haskey(gen_cuts_active, cont.label) || !(branchdc_vio.branchdc_id in gen_cuts_active[cont.label])
-                _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branchdc_c1_violations_sorted $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio)")
-
-                #am = _PM.calc_susceptance_matrix(network_lal)
-                #branch = network_lal["branch"]["$(branch_vio.branch_id)"]
-
-                #bus_injection = calc_c1_branch_ptdf_single(am, ref_bus_id, branch)
-                #bus injection in the violated branch at a rating level 1.0
-                bus_injection = ( branchdc_vio.smdc_vio + network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"] ) / network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"]
-                cut = (gen_id=cont.idx, cont_label=cont.label, branchdc_id=branchdc_vio.branchdc_id, rating_level=1.0, bus_injection=bus_injection)
-                push!(gen_cuts, cut)
-            else
-                _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) with constraint flow violations $(branchdc_vio.smdc_vio)")
             end
         end
 
@@ -193,17 +168,15 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         cont_branch["br_status"] = 0
 
         try
-            solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]            #solution = _PM.compute_dc_pf(network_lal)["solution"]
+            solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]          
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
             continue
         end
 
-        #flow = _PM.calc_branch_flow_dc(network_lal)
-        #_PM.update_data!(network_lal, flow)
 
-        vio = calc_violations(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)           
 
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
@@ -212,34 +185,16 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
             if !haskey(branch_cuts_active, cont.label) || !(branch_vio.branch_id in branch_cuts_active[cont.label])
                 _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio)")
 
-                am = calc_susceptance_matrix_GM(network_lal)
                 branch = network_lal["branch"]["$(branch_vio.branch_id)"]
-
-                bus_injection = _PMSC.calc_c1_branch_ptdf_single(am, ref_bus_id, branch)
-                #bus_injection = ( branch_vio.sm_vio + network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"] ) / network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"]
-                cut = (cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, bus_injection=bus_injection)
+                
+                ptdf_branch, dcdf_branch = calc_branch_ptdf_branchdc_dcdf_single(network_lal, ref_bus_id, branch)
+                
+                cut = (branch_cont_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, ptdf_branch=ptdf_branch, dcdf_branch=dcdf_branch)
                 push!(branch_cuts, cut)
             else
                 _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branch $(branch_vio.branch_id) with constraint flow violations $(branch_vio.sm_vio)")
             end
         end
-
-        #if vio.smdc > sm_threshold
-        #    branchdc_vio = branchdc_c1_violations_sorted(network_lal, network_lal)[1]
-        #    if !haskey(branch_cuts_active, cont.label) || !(branchdc_vio.branchdc_id in branchdc_cuts_active[cont.label])
-        #        PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio)")
-
-                ##am = _PM.calc_susceptance_matrix(network_lal)
-                ##branch = network_lal["branch"]["$(branch_vio.branch_id)"]
-
-                ##bus_injection = calc_c1_branch_ptdf_single(am, ref_bus_id, branch)
-        #        bus_injection = ( branchdc_vio.smdc_vio + network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"] ) / network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"]
-        #        cut = (cont_label=cont.label, branchdc_id=branchdc_vio.branchdc_id, rating_level=1.0, bus_injection=bus_injection)
-        #        push!(branch_cuts, cut)
-        #    else
-        #        PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) with constraint flow violations $(branchdc_vio.smdc_vio)")
-        #    end
-        #end
 
         cont_branch["br_status"] = 1
     end
@@ -260,38 +215,36 @@ branchdc_cuts = []
         cont_branchdc["status"] = 0
 
         try
-            solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]            #solution = _PM.compute_dc_pf(network_lal)["solution"]
+            solution = run_acdcpf_GM( network_lal, _PM.ACPPowerModel, optimizer; setting = s)["solution"]
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
             continue
         end
 
-        vio = calc_violations(network_lal, network_lal)            # Update_GM 
+        vio = calc_violations(network_lal, network_lal)             
 
         ##info(_LOGGER, "$(cont.label) violations $(vio)")
-        ##if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold
-        #if vio.sm > sm_threshold
-        #    branch_vio = branch_c1_violations_sorted(network_lal, network_lal)[1]
-        #    if !haskey(branchdc_cuts_active, cont.label) || !(branch_vio.branch_id in branch_cuts_active[cont.label])
-        #        PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio)")
-        #
-        #        bus_injection = ( branch_vio.sm_vio + network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"] ) / network_lal["branch"]["$(branch_vio.branch_id)"]["rate_c"]
-        #        cut = (cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, bus_injection=bus_injection)
-        #        push!(branchdc_cuts, cut)
-        #    else
-        #        PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branch $(branch_vio.branch_id) with constraint flow violations $(branch_vio.sm_vio)")
-        #    end
-        #end
-
+        ##if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
         if vio.smdc > sm_threshold
             branchdc_vio = branchdc_c1_violations_sorted(network_lal, network_lal)[1]
             if !haskey(branchdc_cuts_active, cont.label) || !(branchdc_vio.branchdc_id in branchdc_cuts_active[cont.label])
                 _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio)")
 
-                bus_injection = ( branchdc_vio.smdc_vio + network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"] ) / network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]["rateC"]
-                cut = (cont_label=cont.label, branchdc_id=branchdc_vio.branchdc_id, rating_level=1.0, bus_injection=bus_injection)
+                branchdc = network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]
+                
+                ptdf_matrix = calc_ptdf_matrix(network_lal)
+                inc_matrix_dc = calc_incidence_matrix_dc(network_lal)
+                dcdf_matrix = - ptdf_matrix * transpose(inc_matrix_dc)
+                branch_map = dcdf_matrix[1:end, branchdc["index"]]
+                branch_index = [branch_map[i] for i in branch_map if branch_map != 0]
+
+                for i = 1: length(branch_index)
+                branch = network_lal["branch"]["$i"]
+                ptdf_branch, dcdf_branch = calc_branch_ptdf_branchdc_dcdf_single(network_lal, ref_bus_id, branch)
+                cut = (branchdc_cont_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, ptdf_branch=ptdf_branch, dcdf_branch=dcdf_branch)
                 push!(branchdc_cuts, cut)
+                end
             else
                 _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) with constraint flow violations $(branchdc_vio.smdc_vio)")
             end
@@ -313,4 +266,82 @@ branchdc_cuts = []
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")
 
     return (gen_cuts=gen_cuts, branch_cuts=branch_cuts, branchdc_cuts=branchdc_cuts)
+end
+
+##############################################################################################################################################################################
+##############################################################################################################################################################################
+##############################################################################################################################################################################
+
+"""
+Given a network data dict, returns a sparse integer valued incidence
+matrix with one row for each branchdc and one column for each busdc.
+In each branchdc row a +1 is used to indicate the _from_ bus and -1 is used to
+indicate _to_ busdc. mapping converter buses, lossless converter & line assumption
+"""
+function calc_incidence_matrix_dc(data::Dict{String,<:Any})
+
+    I = Int[]
+    J = Int[]   
+    V = Int[]
+
+    b = [branchdc for (i,branchdc) in data["branchdc"] if branchdc["status"] != 0]
+    branchdc_ordered = sort(b, by=(x) -> x["index"])
+    for (i,branchdc) in enumerate(branchdc_ordered)
+        fbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["fbusdc"]]
+        tbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["tbusdc"]]
+        
+        push!(I, i); push!(J, fbusdc_conv[1]); push!(V,  1)
+        push!(I, i); push!(J, tbusdc_conv[1]); push!(V, -1)
+
+        for k in length(J):length(data["bus"])
+            push!(I, i); push!(J, k); push!(V, 0)
+        end
+    end
+
+    return _PM.sparse(I,J,V)
+end
+
+"""
+Given a basic network data dict, returns a PTDF & DCDF matrix corresponding to a single branch
+
+"""
+function calc_branch_ptdf_branchdc_dcdf_single(data::Dict{String,<:Any}, ref_bus::Int, branch::Dict{String,<:Any})
+    
+    ptdf_matrix = calc_ptdf_matrix(data)
+    inc_matrix_dc = PowerModelsACDCsecurityconstrained.calc_incidence_matrix_dc(data)   
+    dcdf_matrix = - ptdf_matrix * transpose(inc_matrix_dc)
+
+    ptdf_branch_wr = Dict(1:length(ptdf_matrix[branch["index"], :]) .=> - ptdf_matrix[branch["index"], :])
+    dcdf_branch = Dict(1:length(dcdf_matrix[branch["index"], :]) .=> - dcdf_matrix[branch["index"], :])
+    ptdf_branch = Dict(k => v for (k, v) in ptdf_branch_wr if k != ref_bus)          # remove reference
+    
+    # single branch PTDF and DCDF matrix 
+    return ptdf_branch, dcdf_branch
+end
+
+"""
+given a network data dict, returns a real valued ptdf matrix with one
+row for each branch and one column for each bus in the network.
+Multiplying the ptdf matrix by bus injection values yields a vector
+active power flow values on each branch.
+"""
+function calc_ptdf_matrix(data::Dict{String,<:Any})
+
+    num_bus = length(data["bus"])
+    num_branch = length(data["branch"])
+
+    b_inv = _PM.calc_susceptance_matrix_inv(data).matrix
+
+    ptdf = zeros(num_branch, num_bus)
+    for (i,branch) in data["branch"]
+        branch_idx = branch["index"]
+        bus_fr = branch["f_bus"]
+        bus_to = branch["t_bus"]
+        g,b =  _PM.calc_branch_y(branch)
+        for n in 1:num_bus
+            ptdf[branch_idx, n] = b*(b_inv[bus_fr, n] - b_inv[bus_to, n])
+        end
+    end
+
+    return ptdf
 end
