@@ -259,99 +259,130 @@ end
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branch_flow_cuts, i)
     branch =  _PM.ref(pm, nw, :branch, cut.branch_id)
-    arcs_dc = _PM.ref(pm, :bus_arcs_dcgrid)
+    branch_dc = _PM.ref(pm, :branchdc)
+    fr_idx = [(i, branchdc["fbusdc"], branchdc["tbusdc"]) for (i,branchdc) in branch_dc] 
+    # f_idx = (i, f_bus, t_bus)
 
     if haskey(branch, "rate_c")
-        constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, branch["rate_c"], arcs_dc)
+        constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_fr, branch["rate_c"], fr_idx)
     end
 end
 ""
-function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, rate, arcs_dc)
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_fr, rate, fr_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
-    branchdc_flow = _PM.var(pm, :p_dcgrid)
+    # p_dc_fr = _PM.var(pm, n, :p_dcgrid, f_idx)
+  
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * cut_p_dc_fr["$branchdc_id"]  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate)
+    #JuMP.@constraint(pm.model, -sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * cut_p_dc_fr["$branchdc_id"]  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate)
+   
+    JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate)
+    JuMP.@constraint(pm.model, -sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate)
     
-
-    JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * branchdc_flow[arcs_dc[branchdc_id][1]] for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
     #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
 
 end
 
+##################### ##################### ##################### 
 ""
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branch_flow_cuts, i)
     branch = _PM.ref(pm, nw, :branch, cut.branch_id)
-    arcs_dc = _PM.ref(pm, :bus_arcs_dcgrid)
+    branch_dc = _PM.ref(pm, :branchdc)
+    to_idx = [(i, branchdc["tbusdc"], branchdc["fbusdc"]) for (i,branchdc) in branch_dc] 
+    # t_idx = (i, t_bus, f_bus)
     
     if haskey(branch, "rate_c")
-        constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, branch["rate_c"], arcs_dc)
+        constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_to, branch["rate_c"], to_idx)
     end
 end
 ""
-function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, rate, arcs_dc)
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_to, rate, to_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
-    branchdc_flow = _PM.var(pm, :p_dcgrid)
+    # p_dc_to = _PM.var(pm, n, :p_dcgrid, t_idx)
 
-    JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * branchdc_flow[arcs_dc[branchdc_id][1]] for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
+    #JuMP.@constraint(pm.model, sum(-weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * cut_p_dc_to["$branchdc_id"]  for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
+    #JuMP.@constraint(pm.model, sum(-weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, to_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
     #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
 
 end
+"" 
+##################### ##################### ##################### 
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branchdc_flow_cuts, i)
+    branchdc =  _PM.ref(pm, nw, :branchdc, cut.branchdc_id)  ############################
+    branches = _PM.ref(pm, :branch)
+    fr_idx = [(i, branch["f_bus"], branch["t_bus"]) for (i,branch) in branches] 
+    # f_idx = (i, f_bus, t_bus)
+    
+    if haskey(branchdc, "rateC")
+        constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], fr_idx)
+    end
+end
+""
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, fr_idx)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    # p_dc_fr = _PM.var(pm, n, :p_dcgrid, f_idx)
+    p_fr = _PM.var(pm, n, :p, fr_idx)
+    
+    
+    JuMP.@constraint(pm.model, sum(p_fr[fr_idx[branch_id]] - sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+   
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+
 
 ""
+##################### ##################### ##################### 
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branchdc_flow_cuts, i)
+    branchdc =  _PM.ref(pm, nw, :branchdc, cut.branchdc_id)  ############################
+    branches = _PM.ref(pm, :branch)
+    to_idx = [(i, branch["t_bus"], branch["f_bus"]) for (i,branch) in branches] 
+    # t_idx = (i, t_bus, f_bus)
+    
+    if haskey(branchdc, "rateC")
+        constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], to_idx)
+    end
+end
+""
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, to_idx)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    # p_dc_to = _PM.var(pm, n, :p_dcgrid, t_idx)
+    p_to = _PM.var(pm, n, :p, to_idx)
+    
+    
+    JuMP.@constraint(pm.model, -sum(p_to[to_idx[branch_id]] + sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+   
+    #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * _PM.var(pm, n, :p_dcgrid, to_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc)   <= rate)
+    #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+##################### ##################### ##################### 
+
+"variable controling a linear genetor responce for controller "
+function variable_c1_response_delta(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
+    delta = var(pm, nw)[:delta] = JuMP.@variable(pm.model,
+        base_name="$(nw)_delta",
+        start = 0.0
+    )
+
+    if report
+        sol(pm, nw)[:delta] = delta
+    end
+end
+
+
 
 
 #####################  ############################################################################################################################################################################
 ## not needed anymore
 
-"""
-computes a mapping from bus injections to voltage angles implicitly by solving a system of linear equations.
-an explicit refrence bus id required.
-"""
-function injection_factors_va_GM(am::_PM.AdmittanceMatrix{T}, ref_bus::Int, bus_id::Int)::Dict{Int,T} where T
-    # !haskey(am.bus_to_idx, bus_id) occurs when the bus is inactive
-    if ref_bus == bus_id || !haskey(am.bus_to_idx, bus_id)
-        return Dict{Int,T}()
-    end
 
-    ref_idx = am.bus_to_idx[ref_bus]
-    bus_idx = am.bus_to_idx[bus_id]
-
-    # need to remap the indexes to omit the ref_bus id
-    # a reverse lookup is also required
-    idx2_to_idx1 = Int[]
-    for i in 1:length(am.idx_to_bus)
-        if i != ref_idx
-            push!(idx2_to_idx1, i)
-        end
-    end
-    idx1_to_idx2 = Dict(v => i for (i,v) in enumerate(idx2_to_idx1))
-
-    # rebuild the sparse version of the AdmittanceMatrix without the reference bus
-    I = Int[]
-    J = Int[]
-    V = Float64[]
-
-    I_src, J_src, V_src = _PM.findnz(am.matrix)
-    for k in 1:length(V_src)
-        if I_src[k] != ref_idx && J_src[k] != ref_idx
-            push!(I, idx1_to_idx2[I_src[k]])
-            push!(J, idx1_to_idx2[J_src[k]])
-            push!(V, V_src[k])
-        end
-    end
-    M = _PM.sparse(I,J,V)
-
-    # a vector to select which bus injection factors to compute
-    va_vect = zeros(Float64, length(idx2_to_idx1))
-    va_vect[idx1_to_idx2[bus_idx]] = 1.0
-
-    if_vect = M \ va_vect
-
-    # map injection factors back to original bus ids
-    injection_factors = Dict(am.idx_to_bus[idx2_to_idx1[i]] => v for (i,v) in enumerate(if_vect) if !isapprox(v, 0.0))
-
-    return injection_factors
-end
 ## not needed anymore
 

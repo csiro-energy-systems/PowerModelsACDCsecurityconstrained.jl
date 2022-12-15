@@ -1,6 +1,6 @@
 using Pkg
 Pkg.activate("./scripts")
-
+#Pkg.develop(PackageSpec(path = "/Users/moh050/OneDrive - CSIRO/Documents/GitHub/ChargingStationOpt"))
 using Ipopt
 using Cbc
 using JuMP
@@ -8,6 +8,7 @@ using PowerModels
 using PowerModelsACDC
 using PowerModelsSecurityConstrained
 using PowerModelsACDCsecurityconstrained
+using LinearAlgebra
 
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
@@ -75,32 +76,68 @@ c1_networks["gen_contingencies"][2]=(idx = 1, label = "GEN-1-1", type = "gen")
 #data = PowerModels.make_basic_network(c1_networks)
 file = "./data/case5_acdc_scopf.m"
 data = parse_file(file)
+#data["dcline"] = data["branchdc"]
+#data["dcline"]["1"]["f_bus"] = Dict()
+#data["dcline"]["1"]["f_bus"] =data["branchdc"]["1"]["fbusdc"]
+#data["dcline"]["2"]["f_bus"] = data["branchdc"]["2"]["fbusdc"]
+#data["dcline"]["3"]["f_bus"] = Dict()
+#data["dcline"]["3"]["f_bus"] = data["branchdc"]["3"]["fbusdc"]
+#data["dcline"]["1"]["t_bus"] = Dict()
+#data["dcline"]["1"]["t_bus"] = data["branchdc"]["1"]["tbusdc"]
+#data["dcline"]["2"]["t_bus"] = Dict()
+#data["dcline"]["2"]["t_bus"] = data["branchdc"]["2"]["tbusdc"]
+#data["dcline"]["3"]["t_bus"] = Dict()
+#data["dcline"]["3"]["t_bus"] = data["branchdc"]["3"]["tbusdc"]
+#p1 =powerplot(data; width=1000, height=1000, node_size=1000, gen_size = 500, branch_color = "blue", dcline_color = "green", edge_size=3)
+#PowerPlots.Experimental.add_zoom!(p1)
 
-I = Int[]
-J = Int[]   
-V = Int[]
+#I = Int[]
+#J = Int[]   
+#V = Int[]
 
-b = [branchdc for (i,branchdc) in data["branchdc"] if branchdc["status"] != 0]
-branchdc_ordered = sort(b, by=(x) -> x["index"])
-for (i,branchdc) in enumerate(branchdc_ordered)
-    fbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["fbusdc"]]
-    tbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["tbusdc"]]
+#b = [branchdc for (i,branchdc) in data["branchdc"] if branchdc["status"] != 0]
+#branchdc_ordered = sort(b, by=(x) -> x["index"])
+#for (i,branchdc) in enumerate(branchdc_ordered)
+#    fbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["fbusdc"]]
+#    tbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["tbusdc"]]
     
-    push!(I, i); push!(J, fbusdc_conv[1]); push!(V,  1)
-    push!(I, i); push!(J, tbusdc_conv[1]); push!(V, -1)
+#    push!(I, i); push!(J, fbusdc_conv[1]); push!(V,  1)
+#    push!(I, i); push!(J, tbusdc_conv[1]); push!(V, -1)
 
-    for k in length(J):length(data["bus"])
-        push!(I, i); push!(J, k); push!(V, 0)
-    end
-end
-
-
-
+#    for k in length(J):length(data["bus"])
+#        push!(I, i); push!(J, k); push!(V, 0)
+#    end
+#end
+PowerModelsACDC.process_additional_data!(data)
+data["dcline"] = Dict{String, Any}() 
+setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+results1 = PowerModelsACDC.run_acdcopf(data, PowerModels.DCPPowerModel, lp_solver, setting=setting);
+inc_matrix_ac = PowerModels.calc_basic_incidence_matrix(data)
 #data = c1_networks
 ptdf_matrix = PowerModels.calc_basic_ptdf_matrix(data)
-ref_bus = 1
-inc_matrix_dc = PowerModelsACDCsecurityconstrained.calc_basic_incidence_matrix_dc(data)
+inc_matrix_dc = PowerModelsACDCsecurityconstrained.calc_incidence_matrix_dc(data)
 dcdf_matrix = - ptdf_matrix * transpose(inc_matrix_dc)
+
+Pinj = [1.64308 -0.0508445 -0.45 0.4 0.6]'
+Pinj = [1.64308 0.149155 0 0 0]'
+pijdc = [-0.446609 0.408857 -0.0297137]'
+ptdf_matrix * Pinj + dcdf_matrix *pijdc
+
+
+
+inc_matrix_ac*ptdf_matrix'
+
+am = PowerModelsACDCsecurityconstrained.calc_susceptance_matrix_GM(data)
+
+branch = data["branch"]["6"];
+ref_bus = 1;
+bus_injection = PowerModelsACDCsecurityconstrained.calc_c1_branch_ptdf_single_GM(am, ref_bus, branch)
+
+
+
+inc_matrix_dc = PowerModelsACDCsecurityconstrained.calc_incidence_matrix_dc(data)
+dcdf_matrix = - ptdf_matrix * transpose(inc_matrix_dc)
+LinearAlgebra.pinv(dcdf_matrix)
 ptdf_branch_wr = Dict(1:length(ptdf_matrix[7, :]) .=> - ptdf_matrix[7, :])
 dcdf_branch = Dict(1:length(dcdf_matrix[7, :]) .=> - dcdf_matrix[7, :])
 ptdf_branch = Dict(k => v for (k, v) in ptdf_branch_wr if k != ref_bus)    # remove reference

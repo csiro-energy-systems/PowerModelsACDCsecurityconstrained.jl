@@ -31,22 +31,53 @@ function run_c1_scopf_ptdf_cuts_GM!(network::Dict{String,<:Any}, model_type::Typ
 
     iteration = 1
     cuts_found = 1
-    while cuts_found > 0
+    while cuts_found > 0 && iteration < 20
         time_start_iteration = time()
 
-        cuts = check_c1_contingencies_branch_power_GM(network, optimizer, total_cut_limit=iteration, gen_flow_cuts=[], branch_flow_cuts=[])
+         cuts = check_c1_contingencies_branch_power_GM(network, optimizer, total_cut_limit=iteration, gen_flow_cuts=[], branch_flow_cuts=[])
 
-        cuts_found = length(cuts.gen_cuts) + length(cuts.branch_cuts) + length(cuts.branchdc_cuts)
+        cuts_found = 0
+        #append!(network["gen_flow_cuts"], cuts.gen_cuts) 
+        for cut in cuts.gen_cuts
+            if cut in network_active["gen_flow_cuts"]
+                _PMSC.warn(_LOGGER, "generator flow cut $(cut.branch_id) is active but not secure")
+            else
+                push!(network["gen_flow_cuts"], cut)
+                # network["gen_flow_cut_vio"] += cuts.gen_flow_cut_vio           # To introduce
+                cuts_found += 1
+            end
+        end
+
+        #append!(network["branch_flow_cuts"], cuts.branch_cuts)
+        for cut in cuts.branch_cuts
+            if cut in network["branch_flow_cuts"]
+                _PMSC.warn(_LOGGER, "branch flow cut $(cut.branch_id) is active but not secure")
+            else
+                push!(network["branch_flow_cuts"], cut)
+                # network["branch_flow_cut_vio"] += cuts.branch_flow_cut_vio       # To introduce
+                cuts_found += 1
+            end
+        end
+
+        #append!(network["branchdc_flow_cuts"], cuts.branchdc_cuts)
+        for cut in cuts.branchdc_cuts
+            if cut in network["branchdc_flow_cuts"]
+                _PMSC.warn(_LOGGER, "branchdc flow cut $(cut.branchdc_id) is active but not secure")
+            else
+                push!(network["branchdc_flow_cuts"], cut)
+                #network["branchdc_flow_cuts_vio"] += cuts.branchdc_flow_cuts_vio
+                cuts_found += 1
+            end
+        end
+
+        #cuts_found = length(cuts.gen_cuts) + length(cuts.branch_cuts) + length(cuts.branchdc_cuts)
+
         if cuts_found <= 0
             _PMSC.info(_LOGGER, "no violated cuts found scopf fixed-point reached")
             break
         else
             _PMSC.info(_LOGGER, "found $(cuts_found) branch flow violations")
-        end
-
-        append!(network["gen_flow_cuts"], cuts.gen_cuts)
-        append!(network["branch_flow_cuts"], cuts.branch_cuts)
-        append!(network["branchdc_flow_cuts"], cuts.branchdc_cuts)
+        end  
 
         _PMSC.info(_LOGGER, "active cuts: gen $(length(network["gen_flow_cuts"])), branch $(length(network["branch_flow_cuts"])), branchdc $(length(network["branchdc_flow_cuts"]))")
 

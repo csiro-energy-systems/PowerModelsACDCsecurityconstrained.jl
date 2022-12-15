@@ -158,3 +158,30 @@ mpc.sdata = [
 % INFO    : Gen at bus 5	: Vg=1.0 -> Vg=1.0
 % INFO    : 
 % INFO    : === Writing Matpower Case File Notes ===
+
+
+%% dc grid topology
+%colunm_names% dcpoles
+mpc.dcpol=2;
+% numbers of poles (1=monopolar grid, 2=bipolar grid)
+%% bus data
+%column_names%   busdc_i grid    Pdc     Vdc     basekVdc    Vdcmax  Vdcmin  Cdc area
+mpc.busdc = [
+    1              1       0       1       345         1.1     0.9     0        1;
+    2              1       0       1       345         1.1     0.9     0        1;
+];
+
+%% converters
+%column_names%   busdc_i busac_i type_dc type_ac P_g   Q_g   islcc  Vtar    rtf   xtf  transformer tm   bf   filter    rc      xc  reactor   basekVac    Vmmax   Vmmin   Imax    status   LossA LossB  LossCrec LossCinv  droop      Pdcset    Vdcset  dVdcset Pacmax Pacmin Qacmax Qacmin
+mpc.convdc = [
+                1       2       1       1        0       0     0     1     0.01  0.01      1        1  0.01   1       0.01   0.01     1       345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050    -58.6274   1.0079   0 100 -100 50 -50;
+                2       3       2       1        0       0     0     1     0.01  0.01      1        1  0.01   1       0.01   0.01     1       345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0070     21.9013   1.0000   0 100 -100 50 -50;
+
+];
+
+%% branches
+%column_names%   fbusdc  tbusdc  r      l        c   rateA   rateB   rateC   status
+mpc.branchdc = [
+        1       2       0.00052   0   0    100     100     100     1;
+
+ ];

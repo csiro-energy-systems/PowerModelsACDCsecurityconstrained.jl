@@ -2,21 +2,24 @@ module PowerModelsACDCsecurityconstrained
 
     import JuMP
     import PowerModels
-    #import StochasticPowerModels
+    import StochasticPowerModels
     import PowerModelsACDC
     import PowerModelsSecurityConstrained
     import Memento
-    
+    import LinearAlgebra
     import InfrastructureModels
-    
-    
+    import PolyChaos
+    import KernelDensity
     
 
     const _PM = PowerModels
     const _PMSC = PowerModelsSecurityConstrained
     const _PMACDC = PowerModelsACDC
     const _IM = InfrastructureModels
-    #const _SPM = StochasticPowerModels
+    const _SPM = StochasticPowerModels
+    const _LA = LinearAlgebra
+    const _PCE = PolyChaos
+    const _KDE = KernelDensity
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
@@ -50,6 +53,13 @@ module PowerModelsACDCsecurityconstrained
     include("core/ACDC_scopf_ptdf_dcdf_cuts_iterative.jl")
     #include("core/ACDC_R_pf.jl")
     #include("core/ACDC_R_cv.jl")
+    
+    include("core/ACDC_opf_stochastic.jl")   ## Stochastic
+    include("core/variable_stochastic.jl")
+
+    include("core/acdcopfACR.jl")       #ACR formulation
+
+    include("core/ACDC_re_dispatch.jl")       # Re-dispatch
     
 
 end # module

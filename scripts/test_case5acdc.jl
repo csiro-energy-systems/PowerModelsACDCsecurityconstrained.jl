@@ -8,8 +8,7 @@ using PowerModels
 using PowerModelsACDC
 using PowerModelsSecurityConstrained
 using PowerModelsACDCsecurityconstrained
-
-using Plots
+#using Plots
 
 const PM = PowerModels
 const PM_acdc = PowerModelsACDC
@@ -50,9 +49,20 @@ for i=1:length(data["gen"])
     data["gen"]["$i"]["alpha"] = 1
 end
 
-data["branch"]["1"]["rate_a"] = 0.5; data["branch"]["1"]["rate_b"] = 0.5; data["branch"]["1"]["rate_c"] = 0.5
-data["branch"]["2"]["rate_a"] = 0.35; data["branch"]["2"]["rate_b"] = 0.35; data["branch"]["2"]["rate_c"] = 0.35
-data["branch"]["5"]["rate_a"] = 0.5; data["branch"]["5"]["rate_b"] = 0.5; data["branch"]["5"]["rate_c"] = 0.5
+#data["branch"]["1"]["rate_a"] = 0.5; data["branch"]["1"]["rate_b"] = 0.5; data["branch"]["1"]["rate_c"] = 0.5
+#data["branch"]["2"]["rate_a"] = 0.5; data["branch"]["2"]["rate_b"] = 0.5; data["branch"]["2"]["rate_c"] = 0.5
+#data["branch"]["5"]["rate_a"] = 0.5; data["branch"]["5"]["rate_b"] = 0.5; data["branch"]["5"]["rate_c"] = 0.5
+
+#data["branchdc"]["1"]["rateA"] = 0.5; data["branchdc"]["1"]["rateB"] = 0.5; data["branchdc"]["1"]["rateC"] = 0.5
+data["branchdc"]["2"]["rateA"] = 35; data["branchdc"]["2"]["rateB"] =35; data["branchdc"]["2"]["rateC"] = 35
+#data["branchdc"]["3"]["rateA"] = 80; data["branchdc"]["3"]["rateB"] = 80; data["branchdc"]["3"]["rateC"] = 80
+
+data["load"]["1"]["pd"] = data["load"]["1"]["pd"] * 2
+data["load"]["1"]["qd"] = data["load"]["1"]["qd"] * 2
+data["load"]["2"]["pd"] = data["load"]["2"]["pd"] * 2
+data["load"]["2"]["qd"] = data["load"]["2"]["qd"] * 2
+data["load"]["3"]["pd"] = data["load"]["3"]["pd"] * 2
+data["load"]["3"]["qd"] = data["load"]["3"]["qd"] * 2
 
 ##
 PM_acdc.process_additional_data!(data)
@@ -63,9 +73,25 @@ setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => tru
 
 result_ACDC_scopf_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf, nlp_solver, setting)
 
-result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+#result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
-result_ACDC_scopf_dcp_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf, lp_solver, setting)
+#result_ACDC_scopf_dcp_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf, lp_solver, setting)
 
-result_ACDC_scopf_dcp_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf_soft, lp_solver, setting)
+#result_ACDC_scopf_dcp_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf_soft, lp_solver, setting)
 
+# updating reference point 
+for i = 1:length(data["gen"])
+    data["gen"]["$i"]["pgref"] = result_ACDC_scopf_exact["base"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+end 
+# embedding unsecure contingencies
+if haskey(result_ACDC_scopf_exact, "gen_contingencies_unsecure") 
+    (data["gen"][id][2]["status"] = 0 for id in result_ACDC_scopf_exact["gen_contingencies_unsecure"])
+end
+if haskey(result_ACDC_scopf_exact, "branch_contingencies_unsecure")
+    (data["branch"][id][2]["status"] = 0 for id in result_ACDC_scopf_exact["branch_contingencies_unsecure"])
+end
+if haskey(result_ACDC_scopf_exact, "branchdc_contingencies_unsecure") 
+    (data["branchdc"][id][2]["status"] = 0 for id in result_ACDC_scopf_exact["branchdc_contingencies_unsecure"])
+end
+# Re-dispatch
+result_ACDC_scopf_re_dispatch =  PM_acdc_sc.run_acdcreopf(data, PM.ACPPowerModel, nlp_solver)

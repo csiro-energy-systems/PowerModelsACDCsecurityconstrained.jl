@@ -3,6 +3,7 @@ Pkg.activate("./scripts")
 
 using Ipopt
 using Cbc
+using LinearAlgebra
 using JuMP
 using PowerModels
 using PowerModelsACDC
@@ -11,10 +12,13 @@ using PowerModelsACDCsecurityconstrained
 
 using Plots
 
+
 const PM = PowerModels
 const PM_acdc = PowerModelsACDC
 const PM_sc = PowerModelsSecurityConstrained
 const PM_acdc_sc = PowerModelsACDCsecurityconstrained
+
+
 
 
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)  
@@ -35,6 +39,9 @@ data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "br
 data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
 data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
 
+#data["branchdc_contingencies"] = []
+data["gen_contingencies"] = []
+
 data["area_gens"] = Dict{Int64, Set{Int64}}()
 data["area_gens"][1] = Set([4, 3, 2, 1])
 
@@ -50,22 +57,24 @@ for i=1:length(data["gen"])
 end
 
 
-
 ##
 PM_acdc.process_additional_data!(data)
 
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
+#results = PowerModelsACDC.run_acdcopf(data, PowerModels.ACPPowerModel, nlp_solver)
+
+#results = PowerModelsACDCsecurityconstrained.run_c1_scopf_ptdf_cuts_GM(data, PowerModels.ACPPowerModel, nlp_solver)
 
 result_ACDC_scopf_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf, nlp_solver, setting)
 
-result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+#result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
-result_ACDC_scopf_dcp_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf, lp_solver, setting)
+#result_ACDC_scopf_dcp_exact = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf, lp_solver, setting)
 
-result_ACDC_scopf_dcp_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf_soft, lp_solver, setting)
+#result_ACDC_scopf_dcp_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.DCPPowerModel, PM_acdc_sc.run_scopf_soft, lp_solver, setting)
 
-visualisations!(data, result_ACDC_scopf_exact)
+#visualisations!(data, result_ACDC_scopf_exact)
 ############################################# Soft test ################################################
 #PM_acdc.process_additional_data!(data)
 #result = PM_acdc.run_acdcopf(data, ACPPowerModel, nlp_solver)
@@ -80,3 +89,10 @@ visualisations!(data, result_ACDC_scopf_exact)
 
 ############################################# Soft test ################################################
 
+#using XLSX
+#x      = Dict("a"=>1.0, "b" => 2.0)  
+#fid    = XLSX.openxlsx("ptdfdcdf.xlsx", mode="w")
+#header = ["keys";"values"]
+#data1   = [[collect(keys(data["branch_flow_cuts"][1].dcdf_branch))];[collect(values(data["branch_flow_cuts"][1].dcdf_branch))]]
+
+#XLSX.writetable("ptdfdcdf.xlsx", data1,header)

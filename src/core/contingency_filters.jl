@@ -23,19 +23,18 @@ function check_contingency_violations(network, model_type, optimizer, setting;
     gen_pg_init = Dict(i => gen["pg"] for (i,gen) in network_lal["gen"])
 
     load_active = Dict(i => load for (i, load) in network_lal["load"] if load["status"] != 0)
-
+    
     pd_total = sum(load["pd"] for (i,load) in load_active)
     p_losses = sum(gen["pg"] for (i,gen) in network_lal["gen"] if gen["gen_status"] != 0) - pd_total
     p_delta = 0.0
-
-
+    
     if p_losses > C1_PG_LOSS_TOL
         load_count = length(load_active)
         p_delta = p_losses/load_count
         for (i,load) in load_active
             load["pd"] += p_delta
         end
-        _PMSC.warn(_LOGGER, "active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
+        _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
     end
 
     gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
@@ -202,7 +201,7 @@ function check_contingency_violations(network, model_type, optimizer, setting;
     ########################################################################################################################################
 
     if p_delta != 0.0
-        _PMSC.warn(_LOGGER, "re-adjusting loads by $(-p_delta)")        # Update_GM
+        _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # Update_GM
         for (i,load) in load_active
             load["pd"] -= p_delta
         end

@@ -44,32 +44,52 @@ for i=1:length(data["gen"])
     data["gen"]["$i"]["alpha"] = 1
 end
 
-data["branch"]["1"]["rate_a"] = 0.5; data["branch"]["1"]["rate_b"] = 0.5; data["branch"]["1"]["rate_c"] = 0.5
-data["branch"]["2"]["rate_a"] = 0.35; data["branch"]["2"]["rate_b"] = 0.35; data["branch"]["2"]["rate_c"] = 0.35
-data["branch"]["5"]["rate_a"] = 0.5; data["branch"]["5"]["rate_b"] = 0.5; data["branch"]["5"]["rate_c"] = 0.5
+#data["branch"]["1"]["rate_a"] = 0.5; data["branch"]["1"]["rate_b"] = 0.5; data["branch"]["1"]["rate_c"] = 0.5
+#data["branch"]["2"]["rate_a"] = 0.5; data["branch"]["2"]["rate_b"] = 0.5; data["branch"]["2"]["rate_c"] = 0.5
+#data["branch"]["5"]["rate_a"] = 0.5; data["branch"]["5"]["rate_b"] = 0.5; data["branch"]["5"]["rate_c"] = 0.5
+
+#data["branchdc"]["1"]["rateA"] = 0.5; data["branchdc"]["1"]["rateA"] = 0.5; data["branchdc"]["1"]["rateA"] = 0.5
+data["branchdc"]["2"]["rateA"] = 35; data["branchdc"]["2"]["rateB"] = 35; data["branchdc"]["2"]["rateC"] = 35
+#data["branchdc"]["3"]["rateA"] = 80; data["branchdc"]["3"]["rateB"] = 80; data["branchdc"]["3"]["rateC"] = 80
+
+data["load"]["1"]["pd"] = data["load"]["1"]["pd"] * 2
+data["load"]["1"]["qd"] = data["load"]["1"]["qd"] * 2
+data["load"]["2"]["pd"] = data["load"]["2"]["pd"] * 2
+data["load"]["2"]["qd"] = data["load"]["2"]["qd"] * 2
+data["load"]["3"]["pd"] = data["load"]["3"]["pd"] * 2
+data["load"]["3"]["qd"] = data["load"]["3"]["qd"] * 2
+ 
 ##
 PowerModelsACDC.process_additional_data!(data)
 data["dcline"] = Dict{String, Any}() 
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
+#data["branchdc"]["3"]["status"] = 0
+#data["branch"]["1"]["br_status"] = 0
+
+#results = PowerModelsACDC.run_acdcopf(data, PowerModels.ACPPowerModel, nlp_solver)
+#results = PowerModelsSecurityConstrained.run_c1_scopf_ptdf_cuts!(data, PowerModels.ACPPowerModel, nlp_solver)
+
+
 results = PowerModelsACDCsecurityconstrained.run_c1_scopf_ptdf_cuts_GM(data, PowerModels.ACPPowerModel, nlp_solver)
 
 # verification
-PowerModels.update_data!(data, results["solution"])
-data["gen_flow_cuts"] = []
-data["branch_flow_cuts"] = []
-data["branchdc_flow_cuts"] = []
-itr = 1
-cuts_obs = 1
+#PowerModels.update_data!(data, results["solution"])
+#data["gen_flow_cuts"] = []
+#data["branch_flow_cuts"] = []
+#data["branchdc_flow_cuts"] = []
+#itr = 1
+#cuts_obs = 1
 
-while cuts_obs > 0
+#while cuts_obs > 0
     
-    b_cuts = PowerModelsACDCsecurityconstrained.check_c1_contingencies_branch_power_GM(data, nlp_solver, total_cut_limit=itr, gen_flow_cuts=[], branch_flow_cuts=[])
-    cuts_obs = length(b_cuts.gen_cuts) + length(b_cuts.branch_cuts) + length(b_cuts.branchdc_cuts)
-    append!(data["gen_flow_cuts"], b_cuts.gen_cuts)
-    append!(data["branch_flow_cuts"], b_cuts.branch_cuts)
-    append!(data["branchdc_flow_cuts"], b_cuts.branchdc_cuts)
-    PowerModelsSecurityConstrained.info(_LOGGER, "active cuts: gen $(length(data["gen_flow_cuts"])), branch $(length(data["branch_flow_cuts"])), branchdc $(length(data["branchdc_flow_cuts"]))")
-    itr += 1
-end
+#    b_cuts = PowerModelsACDCsecurityconstrained.check_c1_contingencies_branch_power_GM(data, nlp_solver, total_cut_limit=itr, gen_flow_cuts=[], branch_flow_cuts=[])
+#    cuts_obs = length(b_cuts.gen_cuts) + length(b_cuts.branch_cuts) + length(b_cuts.branchdc_cuts)
+#    append!(data["gen_flow_cuts"], b_cuts.gen_cuts)
+#    append!(data["branch_flow_cuts"], b_cuts.branch_cuts)
+#    append!(data["branchdc_flow_cuts"], b_cuts.branchdc_cuts)
+#    PowerModelsSecurityConstrained.info(_LOGGER, "active cuts: gen $(length(data["gen_flow_cuts"])), branch $(length(data["branch_flow_cuts"])), branchdc $(length(data["branchdc_flow_cuts"]))")
+#    itr += 1
+#end
             
+# powerplot(data; width=800, height=800, node_size=100, edge_size=3)
