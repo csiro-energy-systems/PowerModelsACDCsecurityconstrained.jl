@@ -57,39 +57,24 @@ function post_acdcreopf(pm::_PM.AbstractPowerModel)
         end
     end
     
+    for i in _PM.ids(pm, :gen)
+        p = _PM.var(pm, :pg, i)
+        pabsp = _PM.var(pm, :pgabsp, i)
+        pabsn = _PM.var(pm, :pgabsn, i)
+        pref = _PM.ref(pm, :gen, i, "pgref")
 
-
-    #objective_variable_pgabs_cost(pm)
-    #pg_cost = _PM.var(pm, :pg_cost)
-
-    p = _PM.var(pm, :pg)
+        JuMP.@constraint(pm.model, pabsp - pabsn == pref - p )
+    end
+ 
     pabsp = _PM.var(pm, :pgabsp)
     pabsn = _PM.var(pm, :pgabsn)
-    pref = _PM.ref(pm, :gen, "pgref")
-    @show _PM.ref(pm, :gen)
-    #JuMP.@constraint(pm.model, pabsp[i] - pabsn[i] == pref[i] - p[i] for i in _PM.ref(pm, :gen))
 
     JuMP.@objective(pm.model, Min,
     sum( pabsp[i] + pabsn[i] for (i, gen) in _PM.ref(pm, :gen) )
-                   )
+                    )
 end
 
-#JuMP.@objective(pm.model, Min,
-#sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
-#sum(
-#    sum( 5e5*_PM.var(pm, n, :bf_vio_fr, i) for i in _PM.ids(pm, n, :branch) ) +
-#    sum( 5e5*_PM.var(pm, n, :bf_vio_to, i) for i in _PM.ids(pm, n, :branch) ) + 
-#    sum( 5e5*_PM.var(pm, n, :bdcf_vio_fr, i) for i in _PM.ids(pm, n, :branchdc) ) +
-#    sum( 5e5*_PM.var(pm, n, :bdcf_vio_to, i) for i in _PM.ids(pm, n, :branchdc) ) +
-#    sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-#    sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-#    sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :busdc)) )
-#    for (n, nw_ref) in _PM.nws(pm) )
-#)
-
-
-
-###
+##
 "generates variables `pgabsp[j]` & `pgabsn[j]` for `j` in `gen` for linearizing the absolute `active` generation difference from the given reference values for re-dispatch"
 function variable_absolute_gen_power_real(pm::_PM.AbstractPowerModel; kwargs...)
     variable_absolute_gen_power_real_positive(pm; kwargs...)
@@ -97,7 +82,7 @@ function variable_absolute_gen_power_real(pm::_PM.AbstractPowerModel; kwargs...)
 end
 
 
-function variable_absolute_gen_power_real_positive(pm::AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_absolute_gen_power_real_positive(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     pgabsp = _PM.var(pm, nw)[:pgabsp] = JuMP.@variable(pm.model,
         [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_pgabsp",
         start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "pgabsp_start")
@@ -109,11 +94,11 @@ function variable_absolute_gen_power_real_positive(pm::AbstractPowerModel; nw::I
             JuMP.set_upper_bound(pgabsp[i], gen["pmax"])
         end
     end
-
-    report && _IM.sol_component_value(pm, nw, :gen, :pgabsp, _PM.ids(pm, nw, :gen), pgsbsp)
+# 
+    # report && _IM.sol_component_value(pm, nw, :gen, :pgabsp, _PM.ids(pm, nw, :gen), pgabsp)
 end
 
-function variable_absolute_gen_power_real_negative(pm::AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+function variable_absolute_gen_power_real_negative(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     pgabsn = _PM.var(pm, nw)[:pgabsn] = JuMP.@variable(pm.model,
         [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_pgabsn",
         start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "pgabsn_start")
@@ -126,7 +111,7 @@ function variable_absolute_gen_power_real_negative(pm::AbstractPowerModel; nw::I
         end
     end
 
-    report && _IM.sol_component_value(pm, nw, :gen, :pgabsn, _PM.ids(pm, nw, :gen), pgsbsn)
+    # report && _IM.sol_component_value(pm, nw, :gen, :pgabsn, _PM.ids(pm, nw, :gen), pgabsn)
 end
 
 

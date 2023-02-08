@@ -60,6 +60,12 @@ module PowerModelsACDCsecurityconstrained
     include("core/acdcopfACR.jl")       #ACR formulation
 
     include("core/ACDC_re_dispatch.jl")       # Re-dispatch
+
+    include("core/ACDC_re_dispatch_ots.jl")       # Re-dispatch + ots
+
+    include("core/ACDC_re_dispatch_ots_oltc_pst.jl")    # Re-dispatch + ots + oltc + pst
+
+    include("core/checkscopf.jl") # Temporary to check & verify 
     
 
 end # module

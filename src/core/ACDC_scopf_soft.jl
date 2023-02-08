@@ -28,6 +28,7 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
     _PMACDC.variable_dc_converter(pm, nw=0)               
     _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=0)   
 
+        
     variable_branch_thermal_limit_violation(pm, nw=0)         
     variable_branchdc_thermal_limit_violation(pm, nw=0)         
     variable_power_balance_ac_positive_violation(pm, nw=0)         
@@ -69,7 +70,8 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
         _PMACDC.constraint_conv_filter(pm, i, nw=0)                                    
         if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1                
             _PMACDC.constraint_conv_firing_angle(pm, i, nw=0)                                     
-        end                                                                            
+        end
+                                                                                   
     end
                                                                                   
 
@@ -83,16 +85,20 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
         _PMACDC.variable_active_dcbranch_flow(pm, nw=nw)       
         _PMACDC.variable_dcbranch_current(pm, nw=nw)           
         _PMACDC.variable_dc_converter(pm, nw=nw)               
-        _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)   
+        _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)
+        variable_c1_voltage_response(pm, nw=nw)   
 
         variable_branch_thermal_limit_violation(pm, nw=nw)         
         variable_branchdc_thermal_limit_violation(pm, nw=nw)         
         variable_power_balance_ac_positive_violation(pm, nw=nw)         
-        variable_power_balance_dc_positive_violation(pm, nw=nw)         
+        variable_power_balance_dc_positive_violation(pm, nw=nw) 
+        
+        variable_dc_droop_control(pm, nw=nw)
 
         _PMACDC.constraint_voltage_dc(pm, nw=nw)
 
         _PMSC.variable_c1_response_delta(pm, nw=nw)
+        variable_conv_response_delta(pm, nw=nw)
 
         _PM.constraint_model_voltage(pm, nw=nw)
 
@@ -106,7 +112,8 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
             # if a bus has active generators, fix the voltage magnitude to the base case
             if i in gen_buses
-                _PMSC.constraint_c1_voltage_magnitude_link(pm, i, nw_1=0, nw_2=nw)
+                #_PMSC.constraint_c1_voltage_magnitude_link(pm, i, nw_1=0, nw_2=nw)
+                constraint_c1_gen_power_reactive_response_ap(pm, i, nw_1=0, nw_2=nw)
             end
         end
 
@@ -117,12 +124,20 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
             # setup the linear response function or fix value to base case
             if i in response_gens
-                _PMSC.constraint_c1_gen_power_real_response(pm, i, nw_1=0, nw_2=nw)
+                # _PMSC.constraint_c1_gen_power_real_response(pm, i, nw_1=0, nw_2=nw)
+                constraint_c1_gen_power_real_response_ap(pm, i, nw_1=0, nw_2=nw)
             else
                 _PMSC.constraint_c1_gen_power_real_link(pm, i, nw_1=0, nw_2=nw)
             end
         end
 
+        #conv_buses = Dict(con_id => conv["busac_i"] for (con_id, conv) in _PM.ref(pm, nw=0, :convdc))
+        bus_convs = Dict(conv["busac_i"] => con_id  for (con_id, conv) in _PM.ref(pm, nw=0, :convdc))
+        
+
+        for (i, bus_conv_ac_i) in bus_convs
+            #constraint_conv_power_real_response_ap(pm, bus_conv_ac_i, nw_1=0, nw_2=nw)
+        end
 
         for i in _PM.ids(pm, nw=nw, :branch)                     
             _PM.constraint_ohms_yt_from(pm, i, nw=nw)
@@ -149,7 +164,8 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
             _PMACDC.constraint_conv_filter(pm, i, nw=nw)                                   
             if pm.ref[:it][:pm][:nw][nw][:convdc][i]["islcc"] == 1            
                 _PMACDC.constraint_conv_firing_angle(pm, i, nw=nw)                                    
-            end                                                                           
+            end
+            constraint_dc_droop_control(pm, i, nw_1=0, nw_2=nw)                                                                              
         end
  
     end

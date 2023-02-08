@@ -21,6 +21,10 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     network_active["branch_contingencies"] = []
     network_active["branchdc_contingencies"] = []
 
+    result_scopf["gen_contingencies_unsecure"] = []
+    result_scopf["branch_contingencies_unsecure"] = []
+    result_scopf["branchdc_contingencies_unsecure"] = []
+
     multinetwork = build_ACDC_scopf_multinetwork(network_active)
     result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
     result_scopf["base"] = result  
@@ -52,7 +56,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         for cont in contingencies.gen_contingencies
             if cont in network_active["gen_contingencies"]
                 _PMSC.warn(_LOGGER, "generator contingency $(cont.label) is active but not secure")
-                result_scopf["gen_contingencies_unsecure"] = cont
+                push!(result_scopf["gen_contingencies_unsecure"], cont)
             else
                 push!(network_active["gen_contingencies"], cont)
                 network_active["gen_cont_vio"] += contingencies.gen_cut_vio
@@ -64,7 +68,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         for cont in contingencies.branch_contingencies
             if cont in network_active["branch_contingencies"]
                 _PMSC.warn(_LOGGER, "branch contingency $(cont.label) is active but not secure")
-                result_scopf["branch_contingencies_unsecure"] = cont 
+                push!(result_scopf["branch_contingencies_unsecure"], cont) 
             else
                 push!(network_active["branch_contingencies"], cont)
                 network_active["branch_cont_vio"] += contingencies.branch_cut_vio
@@ -76,7 +80,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         for cont in contingencies.branchdc_contingencies
             if cont in network_active["branchdc_contingencies"]
                 _PMSC.warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")
-                result_scopf["branchdc_contingencies_unsecure"] = cont
+                push!(result_scopf["branchdc_contingencies_unsecure"], cont)
             else
                 push!(network_active["branchdc_contingencies"], cont)
                 network_active["branchdc_cont_vio"] += contingencies.branchdc_cut_vio
