@@ -107,6 +107,39 @@ function variable_power_balance_ac_positive_violation_imag(pm::_PM.AbstractPower
     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :qb_ac_pos_vio, _PM.ids(pm, nw, :bus), qb_ac_pos_vio)
 end
 
+function variable_power_balance_ac_negative_violation(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_power_balance_ac_negative_violation_real(pm::_PM.AbstractPowerModel; kwargs...)
+    variable_power_balance_ac_negative_violation_imag(pm::_PM.AbstractPowerModel; kwargs...) 
+end   
+
+function variable_power_balance_ac_negative_violation_real(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    pb_ac_neg_vio = _PM.var(pm, nw)[:pb_ac_neg_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_pb_ac_neg_vio",
+    )
+
+    if bounded
+        for i in 1:length(_PM.ref(pm, nw, :bus))
+            JuMP.set_lower_bound(pb_ac_neg_vio[i], 0.0)
+            JuMP.set_upper_bound(pb_ac_neg_vio[i], 1e1)
+        end
+    end
+
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :pb_ac_neg_vio, _PM.ids(pm, nw, :bus), pb_ac_neg_vio)
+end 
+
+function variable_power_balance_ac_negative_violation_imag(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    qb_ac_neg_vio = _PM.var(pm, nw)[:qb_ac_neg_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_qb_ac_neg_vio",
+    )
+
+    if bounded
+        for i in 1:length(_PM.ref(pm, nw, :bus))
+            JuMP.set_lower_bound(qb_ac_neg_vio[i], 0.0)
+            JuMP.set_upper_bound(qb_ac_neg_vio[i], 1e1)
+        end
+    end
+
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :qb_ac_neg_vio, _PM.ids(pm, nw, :bus), qb_ac_neg_vio)
+end
+
 
 
 function variable_power_balance_dc_positive_violation(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
@@ -122,6 +155,21 @@ function variable_power_balance_dc_positive_violation(pm::_PM.AbstractPowerModel
     end
 
     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :busdc, :pb_dc_pos_vio, _PM.ids(pm, nw, :busdc), pb_dc_pos_vio)
+end 
+
+function variable_converter_current_violation(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    i_conv_vio = _PM.var(pm, nw)[:i_conv_vio] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_i_conv_vio",
+    )
+
+    if bounded
+        for i in _PM.ids(pm, nw, :convdc)
+            JuMP.set_lower_bound(i_conv_vio[i], 0.0)
+            JuMP.set_upper_bound(i_conv_vio[i], 1e1)
+        end
+    end
+
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :i_conv_vio, _PM.ids(pm, nw, :convdc), i_conv_vio)
 end 
 
 
@@ -141,7 +189,7 @@ function variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; nw::I
         end
     end
 
-#    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen_buses, :vg_pos, _PM.ref(pm, nw, :gen_buses), vg_pos)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_pos, _PM.ids(pm, nw, :bus), vg_pos)
 end
 function variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     vg_neg = _PM.var(pm, nw)[:vg_neg] = JuMP.@variable(pm.model,
@@ -154,8 +202,7 @@ function variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; nw::I
             #JuMP.set_upper_bound(vg_neg[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
         end
     end
-
-#    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen_buses, :vg_neg, _PM.ref(pm, nw, :gen_buses), vg_neg)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_neg, _PM.ids(pm, nw, :bus), vg_neg)
 end 
 
 "variable controling a linear converter responce "
@@ -188,6 +235,8 @@ end
 #     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :ax, _PM.ids(pm, nw, :convdc), ax)
 # end 
 function variable_dc_droop_control(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    
+    
     x1 = _PM.var(pm, nw)[:x1] = JuMP.@variable(pm.model,
         [i in 1:length(_PM.ref(pm, nw, :convdc))], base_name="$(nw)_x1",
     )
@@ -243,22 +292,180 @@ function variable_dc_droop_control(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id
         end
     end
 
-    droopv = _PM.var(pm, nw)[:droopv] = JuMP.@variable(pm.model,
-    [i in 1:length(_PM.ref(pm, nw, :convdc))], base_name="$(nw)_droopv",
+    droopv1 = _PM.var(pm, nw)[:droopv1] = JuMP.@variable(pm.model,
+    [i in 1:length(_PM.ref(pm, nw, :convdc))], base_name="$(nw)_droopv1",
     )
 
     if bounded
         for i in 1:length(_PM.ref(pm, nw, :convdc))
-            JuMP.set_lower_bound(droopv[i], 0.007)
-            JuMP.set_upper_bound(droopv[i], 0.02)
+            JuMP.set_lower_bound(droopv1[i], 0.005)
+            JuMP.set_upper_bound(droopv1[i], 0.01)
         end
     end
 
+    droopv2 = _PM.var(pm, nw)[:droopv2] = JuMP.@variable(pm.model,
+    [i in 1:length(_PM.ref(pm, nw, :convdc))], base_name="$(nw)_droopv2",
+    )
 
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x1, _PM.ids(pm, nw, :convdc), x1)
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x2, _PM.ids(pm, nw, :convdc), x2)
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x3, _PM.ids(pm, nw, :convdc), x3)
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x4, _PM.ids(pm, nw, :convdc), x4)
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x5, _PM.ids(pm, nw, :convdc), x5)
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :droopv, _PM.ids(pm, nw, :convdc), droopv)
+    # if bounded
+    #     for i in 1:length(_PM.ref(pm, nw, :convdc))
+    #         JuMP.set_lower_bound(droopv2[i], 0.00001)
+    #         JuMP.set_upper_bound(droopv2[i], 0.01)
+    #     end
+    # end
+    
+
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x1, _PM.ids(pm, nw, :convdc), x1)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x2, _PM.ids(pm, nw, :convdc), x2)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x3, _PM.ids(pm, nw, :convdc), x3)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x4, _PM.ids(pm, nw, :convdc), x4)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :x5, _PM.ids(pm, nw, :convdc), x5)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :droopv1, _PM.ids(pm, nw, :convdc), droopv1)
+    # report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :droopv2, _PM.ids(pm, nw, :convdc), droopv2)
 end 
+
+# function variable_gen_power(pm::_PM.AbstractPowerModel; kwargs...)
+#     _PM.variable_gen_power_real(pm; kwargs...)
+#     variable_gen_power_imaginary(pm; kwargs...)
+# end
+
+
+
+# "variable: `qq[j]` for `j` in `gen`"
+# function variable_gen_power_imaginary(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+#     qg = _PM.var(pm, nw)[:qg] = JuMP.@variable(pm.model,
+#         [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_qg",
+#         start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "qg_start")
+#     )
+#     bounded=true
+#     if bounded
+#         for (i, gen) in _PM.ref(pm, nw, :gen)
+#             JuMP.set_lower_bound(qg[i], gen["qmin"])
+#             JuMP.set_upper_bound(qg[i], gen["qmax"])
+#         end
+#     end
+
+#     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :qg, _PM.ids(pm, nw, :gen), qg)
+# end
+function variable_generator_reactive_power_bounds(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    qglb = _PM.var(pm, nw)[:qglb] = JuMP.@variable(pm.model,
+        [i in 1:length(_PM.ref(pm, nw, :gen))], base_name="$(nw)_qglb",
+    )
+    
+    # if bounded
+    #     for i in 1:length(_PM.ref(pm, nw, :gen))
+    #         JuMP.set_lower_bound(qglb[i], 0.0)   
+    #         JuMP.set_upper_bound(qglb[i], 10.0)
+    #     end
+    # end
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :qglb, _PM.ids(pm, nw, :gen), qglb)
+end
+
+function variable_dc_converter_n(pm::_PM.AbstractPowerModel; kwargs...)
+    _PMACDC.variable_conv_tranformer_flow(pm; kwargs...)
+    _PMACDC.variable_conv_reactor_flow(pm; kwargs...)
+
+    _PMACDC.variable_converter_active_power(pm; kwargs...)
+    _PMACDC.variable_converter_reactive_power(pm; kwargs...)
+    variable_acside_current(pm; kwargs...)
+    _PMACDC.variable_dcside_power(pm; kwargs...)
+    _PMACDC.variable_converter_firing_angle(pm; kwargs...)
+
+    _PMACDC.variable_converter_filter_voltage(pm; kwargs...)
+    _PMACDC.variable_converter_internal_voltage(pm; kwargs...)
+
+    _PMACDC.variable_converter_to_grid_active_power(pm; kwargs...)
+    _PMACDC.variable_converter_to_grid_reactive_power(pm; kwargs...)
+end
+
+"variable: `iconv_ac[j]` for `j` in `convdc`"
+function variable_acside_current(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool = false, report::Bool=true)
+    ic = _PM.var(pm, nw)[:iconv_ac] = JuMP.@variable(pm.model,
+    [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_iconv_ac",
+    start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "P_g", 1.0)
+    )
+    if bounded
+        for (c, convdc) in _PM.ref(pm, nw, :convdc)
+            JuMP.set_lower_bound(ic[c],  0)
+            JuMP.set_upper_bound(ic[c],  convdc["Imax"])
+        end
+    end
+
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :iconv, _PM.ids(pm, nw, :convdc), ic)
+end
+
+
+######## MINLP validation #############
+
+function variable_gen_response_binary(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
+    
+        xp_u = _PM.var(pm, nw)[:xp_u] = JuMP.@variable(pm.model,
+            [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_xp_u",
+            binary = true,
+            start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "xp_u_start", 1.0)
+        )
+
+        xp_l = _PM.var(pm, nw)[:xp_l] = JuMP.@variable(pm.model,
+            [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_xp_l",
+            binary = true,
+            start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "xp_l_start", 1.0)
+        )
+
+        xq_u = _PM.var(pm, nw)[:xq_u] = JuMP.@variable(pm.model,
+            [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_xq_u",
+            binary = true,
+            start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "xq_u_start", 1.0)
+        )
+
+        xq_l = _PM.var(pm, nw)[:xq_l] = JuMP.@variable(pm.model,
+            [i in _PM.ids(pm, nw, :gen)], base_name="$(nw)_xq_l",
+            binary = true,
+            start = _PM.comp_start_value(_PM.ref(pm, nw, :gen, i), "xq_l_start", 1.0)
+        )
+
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :xp_u, _PM.ids(pm, nw, :gen), xp_u)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :xp_l, _PM.ids(pm, nw, :gen), xp_l)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :xq_u, _PM.ids(pm, nw, :gen), xq_u)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :xq_l, _PM.ids(pm, nw, :gen), xq_l)
+
+end
+
+function variable_conv_droop_binary(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
+    
+    xd_a = _PM.var(pm, nw)[:xd_a] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_xd_a",
+        binary = true,
+        start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "xd_a_start", 1.0)
+    )
+
+    xd_b = _PM.var(pm, nw)[:xd_b] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_xd_b",
+        binary = true,
+        start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "xd_b_start", 1.0)
+    )
+
+    xd_c = _PM.var(pm, nw)[:xd_c] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_xd_c",
+        binary = true,
+        start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "xd_c_start", 1.0)
+    )
+
+    xd_d = _PM.var(pm, nw)[:xd_d] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_xd_d",
+        binary = true,
+        start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "xd_d_start", 1.0)
+    )
+
+    xd_e = _PM.var(pm, nw)[:xd_e] = JuMP.@variable(pm.model,
+        [i in _PM.ids(pm, nw, :convdc)], base_name="$(nw)_xd_e",
+        binary = true,
+        start = _PM.comp_start_value(_PM.ref(pm, nw, :convdc, i), "xd_e_start", 1.0)
+    )
+
+report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_a, _PM.ids(pm, nw, :convdc), xd_a)
+report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_b, _PM.ids(pm, nw, :convdc), xd_b)
+report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_c, _PM.ids(pm, nw, :convdc), xd_c)
+report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_d, _PM.ids(pm, nw, :convdc), xd_d)
+report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_e, _PM.ids(pm, nw, :convdc), xd_e)
+
+end

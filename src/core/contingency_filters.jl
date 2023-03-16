@@ -6,8 +6,8 @@ simulation. It returns a list of contingencies where a violation is found.
 """
 
 function check_contingency_violations(network, model_type, optimizer, setting;
-    gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, contingency_limit=typemax(Int64),
-    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
+    gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, convdc_contingency_limit=15, contingency_limit=typemax(Int64),
+    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), convdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
 
     results_c = Dict{String,Any}()
 
@@ -28,25 +28,26 @@ function check_contingency_violations(network, model_type, optimizer, setting;
     p_losses = sum(gen["pg"] for (i,gen) in network_lal["gen"] if gen["gen_status"] != 0) - pd_total
     p_delta = 0.0
     
-    if p_losses > C1_PG_LOSS_TOL
-        load_count = length(load_active)
-        p_delta = p_losses/load_count
-        for (i,load) in load_active
-            load["pd"] += p_delta
-        end
-        _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
-    end
+    # if p_losses > C1_PG_LOSS_TOL
+    #     load_count = length(load_active)
+    #     p_delta = p_losses/load_count
+    #     for (i,load) in load_active
+    #         load["pd"] += p_delta
+    #     end
+    #     _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
+    # end
 
     gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
     branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
     branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
+    convdc_contingencies = calc_convdc_contingency_subset(network_lal, convdc_eval_limit=convdc_eval_limit)
 
     ######################################################################################################################################################
     gen_cuts = []
     gen_cut_vio = 0.0
     for (i,cont) in enumerate(gen_contingencies)
         if length(gen_cuts) >= gen_contingency_limit
-            _PMSC.info(_LOGGER, "hit gen flow cut limit $(gen_contingency_limit)")       # Update_GM
+            _PMSC.info(_LOGGER, "hit gen cut limit $(gen_contingency_limit)")       # Update_GM
             break
         end
         if length(gen_cuts) >= contingency_limit
@@ -156,12 +157,13 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         
     end
 
+    ######################################################################################################################################################
     
     branchdc_cuts = []       # Update_GM
     branchdc_cut_vio = 0.0
     for (i,cont) in enumerate(branchdc_contingencies)        # Update_GM
         if length(branchdc_cuts) >= branchdc_contingency_limit       # Update_GM
-            _PMSC.info(_LOGGER, "hit branch flow cut limit $(branchdc_contingency_limit)")                # Update_GM
+            _PMSC.info(_LOGGER, "hit branchdc flow cut limit $(branchdc_contingency_limit)")                # Update_GM
             break
         end
         if length(gen_cuts) + length(branch_cuts) + length(branchdc_cuts) >= contingency_limit       # Update_GM
@@ -198,22 +200,76 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         cont_branchdc["status"] = 1
     end
 
-    ########################################################################################################################################
-
-    if p_delta != 0.0
-        _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # Update_GM
-        for (i,load) in load_active
-            load["pd"] -= p_delta
+    ######################################################################################################################################################
+    convdc_cuts = []  
+    convdc_cut_vio = 0.0
+    for (i,cont) in enumerate(convdc_contingencies)        # Update_GM
+        if length(convdc_cuts) >= convdc_contingency_limit       # Update_GM
+            _PMSC.info(_LOGGER, "hit convdc cut limit $(convdc_contingency_limit)")                # Update_GM
+            break
         end
+        if length(gen_cuts) + length(branch_cuts) + length(branchdc_cuts) + length(convdc_cuts) >= contingency_limit       # Update_GM
+            _PMSC.info(_LOGGER, "hit total cut limit $(contingency_limit)")                  # Update_GM
+            break
+        end
+
+        #info(_LOGGER, "working on ($(i)/$(branch_eval_limit)/$(branch_cont_total)): $(cont.label)")
+
+        cont_convdc = network_lal["convdc"]["$(cont.idx)"]            # Update_GM
+        cont_convdc["status"] = 0                                       # Update_GM
+
+        try
+            solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
+            _PM.update_data!(network_lal, solution)
+            results_c["c$(cont.label)"] = solution
+        catch exception
+            _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
+            continue
+        end
+
+        vio = calc_violations(network_lal, network_lal)          # Update_GM 
+        results_c["vio_c$(cont.label)"] = vio
+        #info(_LOGGER, "$(cont.label) violations $(vio)")
+        #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold || vio.cmac > sm_threshold || vio.cmdc > sm_threshold
+        if vio.sm > sm_threshold || vio.smdc > sm_threshold || vio.cmac > sm_threshold || vio.cmdc > sm_threshold
+            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
+            push!(convdc_cuts, cont)
+            convdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc + vio.cmac + vio.cmdc
+        else
+            convdc_cut_vio = 0.0
+        end
+
+        cont_convdc["status"] = 1
     end
+
+
+
+    ######################################################################################################################################################
+
+    # if p_delta != 0.0
+    #     _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # Update_GM
+    #     for (i,load) in load_active
+    #         load["pd"] -= p_delta
+    #     end
+    # end
 
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, results_c)
+    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, convdc_cut_vio, results_c)
 end
 
 
 
 ### Temporarily
 
+"ranks converter contingencies and down selects based on evaluation limits"
+function calc_convdc_contingency_subset(network::Dict{String,<:Any}; convdc_eval_limit=length(network["convdc_contingencies"]))
+    convdc_cap = Dict(convdc["index"] => sqrt(max(abs(convdc["Pacmin"]), abs(convdc["Pacmax"]))^2 + max(abs(convdc["Qacmin"]), abs(convdc["Qacmax"]))^2) for (i,convdc) in network["convdc"])
+    convdc_contingencies = sort(network["convdc_contingencies"], rev=true, by=x -> convdc_cap[x.idx])
+
+    convdc_cont_limit = min(convdc_eval_limit, length(network["convdc_contingencies"]))
+    convdc_contingencies = convdc_contingencies[1:convdc_cont_limit]
+
+    return convdc_contingencies
+end

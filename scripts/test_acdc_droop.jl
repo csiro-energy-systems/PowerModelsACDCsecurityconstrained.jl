@@ -65,7 +65,6 @@ f(vdc) = pref_dc +( (1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdc
 +((1 / k_droop * (vdclow - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc)) - (vdc - (vdclow - epsilon)) * (vdc - (vdcmin + epsilon)))/ep)))
 -((1 / k_droop * (vdclow - vdc + vdcmin - vdclow)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc + vdcmin - vdclow)) - (vdc - vdcmin + vdclow - (vdclow - epsilon)) * (vdc - vdcmin + vdclow - (vdcmin + epsilon)))/ep))) )
 
-plot(f, 0.8, 1.2)
 
 vdc = resultpf_droop["solution"]["busdc"]["$i"]["vm"]
 pdc = resultpf_droop["solution"]["convdc"]["$i"]["pdc"]

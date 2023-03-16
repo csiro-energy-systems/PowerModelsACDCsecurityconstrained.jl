@@ -36,6 +36,7 @@ module PowerModelsACDCsecurityconstrained
     
     include("core/ACDC_scopf.jl")
     include("core/ACDC_scopf_soft.jl")
+    include("core/ACDC_scopf_soft_minlp.jl")
 
   
     include("core/contingency_filters.jl")

@@ -9,9 +9,11 @@ function constraint_power_balance_ac_soft(pm::_PM.AbstractACPModel, n::Int,  i::
     qconv_grid_ac = _PM.var(pm, n,  :qconv_tf_fr)
     pb_ac_pos_vio = _PM.var(pm, n, :pb_ac_pos_vio, i)
     qb_ac_pos_vio = _PM.var(pm, n, :qb_ac_pos_vio, i)
+    pb_ac_neg_vio = _PM.var(pm, n, :pb_ac_neg_vio, i)
+    qb_ac_neg_vio = _PM.var(pm, n, :qb_ac_neg_vio, i)
 
-    JuMP.@NLconstraint(pm.model, pb_ac_pos_vio  + sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens)   - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
-    JuMP.@NLconstraint(pm.model, qb_ac_pos_vio  + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2)
+    JuMP.@NLconstraint(pm.model, pb_ac_pos_vio - pb_ac_neg_vio  + sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens)   - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
+    JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2)
 end
 
 
@@ -153,7 +155,19 @@ end
 
 
 ##################### acp.jl ############################################################################################################################################################################
-function constraint_ohms_dc_branch_soft(pm::_PM.AbstractACPModel, n::Int, i::Int, f_bus, t_bus, f_idx, t_idx, r, p)
+function constraint_ohms_dc_branch_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    branch = _PM.ref(pm, nw, :branchdc, i)
+    f_bus = branch["fbusdc"]
+    t_bus = branch["tbusdc"]
+    rate = branch["rateA"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    p = _PM.ref(pm, nw, :dcpol)
+
+    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p, rate)
+end
+function constraint_ohms_dc_branch_soft(pm::_PM.AbstractACPModel, n::Int, i::Int, f_bus, t_bus, f_idx, t_idx, r, p, rate)
     p_dc_fr = _PM.var(pm, n,  :p_dcgrid, f_idx)
     p_dc_to = _PM.var(pm, n,  :p_dcgrid, t_idx)
     vmdc_fr = _PM.var(pm, n,  :vdcm, f_bus)
@@ -161,12 +175,18 @@ function constraint_ohms_dc_branch_soft(pm::_PM.AbstractACPModel, n::Int, i::Int
     bdcf_vio_fr = _PM.var(pm, n,  :bdcf_vio_fr, i)
     bdcf_vio_to = _PM.var(pm, n,  :bdcf_vio_to, i)
 
+    # soft bounds
+    JuMP.@constraint(pm.model, p_dc_fr <= rate + bdcf_vio_fr)
+    JuMP.@constraint(pm.model, p_dc_fr >= -rate - bdcf_vio_fr)
+
+    JuMP.@constraint(pm.model, p_dc_to <= rate + bdcf_vio_to)
+    JuMP.@constraint(pm.model, p_dc_to >= -rate - bdcf_vio_to)
     if r == 0
-        JuMP.@constraint(pm.model, p_dc_fr - bdcf_vio_fr + p_dc_to - bdcf_vio_to == 0)
+        JuMP.@constraint(pm.model, p_dc_fr  + p_dc_to  == 0)
     else
         g = 1 / r
-        JuMP.@NLconstraint(pm.model, p_dc_fr - bdcf_vio_fr == p * g * vmdc_fr * (vmdc_fr - vmdc_to))
-        JuMP.@NLconstraint(pm.model, p_dc_to - bdcf_vio_to == p * g * vmdc_to * (vmdc_to - vmdc_fr))
+        JuMP.@NLconstraint(pm.model, p_dc_fr  == p * g * vmdc_fr * (vmdc_fr - vmdc_to))
+        JuMP.@NLconstraint(pm.model, p_dc_to  == p * g * vmdc_to * (vmdc_to - vmdc_fr))
     end
 end
 
@@ -279,10 +299,11 @@ function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractPowerModel
     if haskey(_PM.ref(pm, nw_2, :gen), gen_id[1])
         gen = _PM.ref(pm, nw_2, :gen, _PM.ref(pm, :bus_gens, nw=nw_2, i)[1])
         constraint_c1_gen_power_reactive_response_ap(pm, nw_1, nw_2, i, gen["ep"])
-    else
-        _PMSC.constraint_c1_voltage_magnitude_link(pm, i, nw_1=0, nw_2=nw)
+    # else
+        # _PMSC.constraint_c1_voltage_magnitude_link(pm, i, nw_1=0, nw_2=nw_2)
     end
 end
+
 
 ""
 function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int, ep)
@@ -290,25 +311,39 @@ function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractACPModel, 
     vm_2 = _PM.var(pm, n_2, :vm, i)
     vm_pos = _PM.var(pm, n_2, :vg_pos, i)
     vm_neg = _PM.var(pm, n_2, :vg_neg, i)
+    vmub = JuMP.upper_bound(_PM.var(pm, :vm, i, nw=n_1))
+    vmlb = JuMP.lower_bound(_PM.var(pm, :vm, i, nw=n_1))
     gen_id = _PM.ref(pm, :bus_gens, nw=n_2, i)[1]
     qg = _PM.var(pm, :qg, gen_id, nw=n_2)
+    # qglb = _PM.var(pm, n_2, :qglb, gen_id)
     qgub = JuMP.upper_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
     qglb = JuMP.lower_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
+    ep = 0.01
+    
+    JuMP.set_upper_bound(qg, qgub)
+    JuMP.set_lower_bound(qg, qglb)
+    # JuMP.@NLconstraint(pm.model, qglb == qglb1 - ep*log(1 + exp((vmub-vm_1)/ep)))     # relaxing
+    # JuMP.@constraint(pm.model, qg >= qglb)
 
     JuMP.set_upper_bound(vm_pos, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
     JuMP.set_upper_bound(vm_neg, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
 
-    JuMP.set_upper_bound(qg, qgub)
-    JuMP.set_lower_bound(qg, qglb)
 
-    JuMP.set_upper_bound(vm_2, JuMP.upper_bound(vm_1))
-    JuMP.set_lower_bound(vm_2, JuMP.lower_bound(vm_1))
+    JuMP.set_upper_bound(_PM.var(pm, n_2, :vm, i), JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)))
+    JuMP.set_lower_bound(_PM.var(pm, n_2, :vm, i), JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
 
-    JuMP.@constraint(pm.model, vm_2 == vm_1 + vm_pos - vm_neg)
+    # JuMP.@constraint(pm.model, vm_2 == vm_1 + vm_pos - vm_neg)
+    # #JuMP.@NLconstraint(pm.model, vm_pos * vm_neg == 0)
 
-    JuMP.@NLconstraint(pm.model, vm_pos - ep*log(1 + exp((vm_pos - qg + qglb)/ep)) <= ep*log(2))
-    JuMP.@NLconstraint(pm.model, vm_neg - ep*log(1 + exp((vm_neg + qg - qgub)/ep)) <= ep*log(2))
+    # JuMP.@NLconstraint(pm.model, vm_pos - ep*log(1 + exp((vm_pos - qg + qglb)/(ep))) <=  ep*log(2))
+    # JuMP.@NLconstraint(pm.model, vm_neg - ep*log(1 + exp((vm_neg + qg - qgub)/(ep))) <=  ep*log(2))
+    
+    JuMP.@NLconstraint(pm.model, vm_2 ==  vm_1 + ep*log(1 + exp(((vmub-vm_1) - qg + qglb)/(ep))) - ep*log(1 + exp(((vm_1-vmlb) + qg - qgub)/(ep))) )
 end
+
+
+
+
 #################################################################################################################################################################################################
 #################################################################################################################################################################################################
 
@@ -327,8 +362,24 @@ end
 function constraint_dc_droop_control(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh, ep)
     pconv_dc = _PM.var(pm, n_2, :pconv_dc, i)
     vdc = _PM.var(pm, n_2, :vdcm, busdc_i)
-    pconv_dc_base = _PM.var(pm, n_1, :pconv_dc, i)
-    #k_droop = _PM.var(pm, n_2, :droopv, i)
+ 
+  
+
+
+    # if pref_dc > 0
+    #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
+    #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
+    # elseif pref_dc < 0
+    #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
+    #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
+    # elseif pref_dc == 0
+    #     k_droop_i = k_droop
+    #     k_droop_r = k_droop
+    # end
+
+    # pconv_dc_base = _PM.var(pm, n_1, :pconv_dc, i)
+    #k_droop = _PM.var(pm, n_2, :droopv1, i)
+    #k_droop_r = _PM.var(pm, n_2, :droopv2, i)
     # x1 = _PM.var(pm, n_2, :x1, i)
     # x2 = _PM.var(pm, n_2, :x2, i)
     # x3 = _PM.var(pm, n_2, :x3, i)
@@ -336,7 +387,7 @@ function constraint_dc_droop_control(pm::_PM.AbstractACPModel, n_1::Int, n_2::In
     # x5 = _PM.var(pm, n_2, :x5, i)
     
     #P = 10     # positive number
-    epsilon = 1E-12
+    #epsilon = 1E-12
 
     # P_1 = 1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) + pref_dc
     # P_2 = 1 / k_droop * (vdchigh - vdc) + pref_dc
@@ -377,25 +428,260 @@ function constraint_dc_droop_control(pm::_PM.AbstractACPModel, n_1::Int, n_2::In
     #JuMP.@constraint(pm.model, pconv_dc == pref_dc - sign(pref_dc) * 1 / k_droop * (vdc - vref_dc))
 
 
-        JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc + (1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax)) - ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - vdcmax + vdc)/ep))
-        -(1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax)) + ep * log(1 + exp(((1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - 2*vdcmax + vdchigh + vdc)/ep))
-        + ((1 / k_droop * (vdclow - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc)) - (vdc - (vdclow - epsilon)) * (vdc - (vdcmin + epsilon)))/ep)))
-        -((1 / k_droop * (vdclow - vdc + vdcmin - vdclow)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc + vdcmin - vdclow)) - (vdc - vdcmin + vdclow - (vdclow - epsilon)) * (vdc - vdcmin + vdclow - (vdcmin + epsilon)))/ep)))
+        JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc + (   -((1 /  k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax)) - ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - vdcmax + vdc)/ep))) 
+        -(-(1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax)) + ep * log(1 + exp(((1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - 2*vdcmax + vdchigh + vdc)/ep)) )
+        -((1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) - vdc + vdcmin)/ep)))
+        -(-((1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) - vdc + 2*vdcmin - vdclow )/ep)))   ))
         )
+
+        # JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc + (   -(p_pos - ep * log(1 + exp((p_pos - vdcmax + vdc)/ep))) 
+        # +(p_pos_pos - ep * log(1 + exp((p_pos_pos - 2*vdcmax + vdchigh + vdc)/ep)))
+        # -(p_neg + ep*log(1 + exp((-p_neg - vdc + vdcmin)/ep)))
+        # +(p_neg_neg - ep*log(1 + exp((-p_neg_neg  - vdc + 2*vdcmin - vdclow )/ep)))    )
+        # )
+        
+    #    JuMP.@constraint(pm.model, pconv_dc == pref_dc - p_pos + p_pos_pos - p_neg - p_neg_neg) 
+
+    #    JuMP.@NLconstraint(pm.model, p_pos - ep * log(1 + exp((p_pos - vdcmax + vdc)/ep)) <= ep*log(2))
+    #    JuMP.@NLconstraint(pm.model, p_pos_pos - ep * log(1 + exp((p_pos_pos - 2*vdcmax + vdchigh + vdc)/ep)) <= ep*log(2))
+    #    JuMP.@NLconstraint(pm.model, -p_neg - ep*log(1 + exp((-p_neg - vdc + vdcmin)/ep)) <= ep*log(2))
+    #    JuMP.@NLconstraint(pm.model, -p_neg_neg + ep*log(1 + exp((-p_neg_neg  - vdc + 2*vdcmin - vdclow )/ep)) <= ep*log(2))
+
+    #    JuMP.@constraint(pm.model, p_pos == 1 /  k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax))
+    #    JuMP.@constraint(pm.model, p_pos_pos == 1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax))
+    #    JuMP.@constraint(pm.model, p_neg == 1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin))
+    #    JuMP.@constraint(pm.model, p_neg_neg == 1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin))
+
+end
+function constraint_dc_droop_control_sos(pm::_PM.AbstractPowerModel, i::Int; nw_1::Int=_PM.nw_id_default, nw_2::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw_2, :convdc, i)
+    bus = _PM.ref(pm, nw_2, :busdc, conv["busdc_i"])
+
+    if conv["type_dc"] == 2
+       # _PMACDC.constraint_dc_voltage_magnitude_setpoint(pm, i)
+       # _PMACDC.constraint_reactive_conv_setpoint(pm, i)
+    elseif conv["type_dc"] == 3
+        constraint_dc_droop_control_sos(pm, nw_1, nw_2, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"], conv["Vmmin"], conv["Vmmax"], conv["Vdclow"], conv["Vdchigh"], conv["ep"])
+    end 
+end
+function constraint_dc_droop_control_sos(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh, ep)
+    pconv_dc = _PM.var(pm, n_2, :pconv_dc, i)
+    vdc = _PM.var(pm, n_2, :vdcm, busdc_i)
+    x1 = _PM.var(pm, n_2, :x1, i)
+    x2 = _PM.var(pm, n_2, :x2, i)
+    x3 = _PM.var(pm, n_2, :x3, i)
+    x4 = _PM.var(pm, n_2, :x4, i)
+    x5 = _PM.var(pm, n_2, :x5, i)
+    epsilon = 1E-12
+    x=([x1, x2, x3, x4, x5])
+
+    JuMP.@constraint(pm.model, x in JuMP.SOS1())
+    JuMP.@constraint(pm.model, vdcmax*x[1] + (vdchigh + epsilon)*x[2] + (vdclow + epsilon)*x[3] + vdcmin*x[4] <= vdc )
+    JuMP.@constraint(pm.model, (vdcmax - epsilon)*x[2] + (vdchigh - epsilon)*x[3] + (vdclow - epsilon)*x[4] + vdcmin*x[5] >= vdc )
+    JuMP.@constraint(pm.model, x1 + x2 + x3 + x4 + x5 == 1)
+    JuMP.@constraint(pm.model, pconv_dc == (1 / k_droop * (vdcmax - vdc) + pref_dc)*x[1] + (1 / k_droop * (vdchigh - vdc) + pref_dc)*x[2] + pref_dc*x[3] + (1 / k_droop * (vdclow - vdc) + pref_dc)*x[4] + (1 / k_droop * (vdcmin - vdc) + pref_dc)*x[5])
+end
+
+#####################  ############################################################################################################################################################################
+
+""
+function constraint_ohms_y_oltc_pst_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    branch = _PM.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    g, b = _PM.calc_branch_y(branch)
+    tr, ti = _PM.calc_branch_t(branch)
+    g_fr = branch["g_fr"]
+    b_fr = branch["b_fr"]
     
+
+    vad_min = _PM.ref(pm, nw, :off_angmin)
+    vad_max = _PM.ref(pm, nw, :off_angmax)
+
+    constraint_ohms_y_oltc_pst_from(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, vad_min, vad_max)
+end
+
+
+""
+function constraint_ohms_y_oltc_pst_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    branch = _PM.ref(pm, nw, :branch, i)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    g, b = _PM.calc_branch_y(branch)
+    tr, ti = _PM.calc_branch_t(branch)
+    g_to = branch["g_to"]
+    b_to = branch["b_to"]
+    
+    vad_min = _PM.ref(pm, nw, :off_angmin)
+    vad_max = _PM.ref(pm, nw, :off_angmax)
+
+    constraint_ohms_y_oltc_pst_to(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, vad_min, vad_max)
+end
+
+"""
+Branch - On/Off Ohm's Law Constraints + Creates Ohms constraints with variables for complex transformation ratio (y post fix indicates  Y is in rectangular form)
+```
+p[f_idx] == z*(g/tm*v[f_bus]^2 + (-g*tr+b*ti)/tm^2*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus]-ta)) + (-b*tr-g*ti)/tm^2*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus]-ta)))
+q[f_idx] == z*(-(b+c/2)/tm*v[f_bus]^2 - (-b*tr-g*ti)/tm^2*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus]-ta)) + (-g*tr+b*ti)/tm^2*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus]-ta)))
+```
+"""
+function constraint_ohms_y_oltc_pst_from(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, vad_min, vad_max)
+    p_fr  = _PM.var(pm, n,  :p, f_idx)
+    q_fr  = _PM.var(pm, n,  :q, f_idx)
+    vm_fr = _PM.var(pm, n, :vm, f_bus)
+    vm_to = _PM.var(pm, n, :vm, t_bus)
+    va_fr = _PM.var(pm, n, :va, f_bus)
+    va_to = _PM.var(pm, n, :va, t_bus)
+    tm = _PM.var(pm, n, :tm, f_idx[1])
+    ta = _PM.var(pm, n, :ta, f_idx[1])
+    
+
+    JuMP.@NLconstraint(pm.model, p_fr == ( (g+g_fr)/tm^2*vm_fr^2 + (-g*tr+b*ti)/tm^2*(vm_fr*vm_to*cos(va_fr-va_to-ta)) + (-b*tr-g*ti)/tm^2*(vm_fr*vm_to*sin(va_fr-va_to-ta))) )
+    JuMP.@NLconstraint(pm.model, q_fr == (-(b+b_fr)/tm^2*vm_fr^2 - (-b*tr-g*ti)/tm^2*(vm_fr*vm_to*cos(va_fr-va_to-ta)) + (-g*tr+b*ti)/tm^2*(vm_fr*vm_to*sin(va_fr-va_to-ta))) )
+
+ 
+end
+
+"""
+```
+p[t_idx] == z*(g*v[t_bus]^2 + (-g*tr-b*ti)/tm^2*(v[t_bus]*v[f_bus]*cos(t[t_bus]-t[f_bus]+ta)) + (-b*tr+g*ti)/tm^2*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]+ta)))
+q[t_idx] == z*(-(b+c/2)*v[t_bus]^2 - (-b*tr+g*ti)/tm^2*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus]+ta)) + (-g*tr-b*ti)/tm^2*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]+ta)))
+```
+"""
+function constraint_ohms_y_oltc_pst_to(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, vad_min, vad_max)
+    p_to  = _PM.var(pm, n,  :p, t_idx)
+    q_to  = _PM.var(pm, n,  :q, t_idx)
+    vm_fr = _PM.var(pm, n, :vm, f_bus)
+    vm_to = _PM.var(pm, n, :vm, t_bus)
+    va_fr = _PM.var(pm, n, :va, f_bus)
+    va_to = _PM.var(pm, n, :va, t_bus)
+    tm = _PM.var(pm, n, :tm, f_idx[1])
+    ta = _PM.var(pm, n, :ta, f_idx[1])
+    
+    JuMP.@NLconstraint(pm.model, p_to == ( (g+g_to)*vm_to^2 + (-g*tr-b*ti)/tm^2*(vm_to*vm_fr*cos(va_to-va_fr+ta)) + (-b*tr+g*ti)/tm^2*(vm_to*vm_fr*sin(va_to-va_fr+ta))) )
+    JuMP.@NLconstraint(pm.model, q_to == (-(b+b_to)*vm_to^2 - (-b*tr+g*ti)/tm^2*(vm_to*vm_fr*cos(va_to-va_fr+ta)) + (-g*tr-b*ti)/tm^2*(vm_to*vm_fr*sin(va_to-va_fr+ta))) )
+
+    
+end
+
+function constraint_converter_current(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw, :convdc, i)
+    Vmax = conv["Vmmax"]
+    Imax = conv["Imax"]
+    constraint_converter_current(pm, nw, i, Vmax, Imax)
+end
+
+function constraint_converter_current(pm::_PM.AbstractACPModel, n::Int, i::Int, Umax, Imax)
+    vmc = _PM.var(pm, n, :vmc, i)
+    pconv_ac = _PM.var(pm, n, :pconv_ac, i)
+    qconv_ac = _PM.var(pm, n, :qconv_ac, i)
+    iconv = _PM.var(pm, n, :iconv_ac, i)
+    i_conv_vio = _PM.var(pm, n, :i_conv_vio, i)
+
+    JuMP.set_lower_bound(iconv, 0)
+    JuMP.@constraint(pm.model, iconv <= Imax + i_conv_vio)
+    JuMP.@NLconstraint(pm.model, pconv_ac^2 + qconv_ac^2 == vmc^2 * iconv^2)
+end
+
+###### MINLP Validation ########
+###### MINLP Validation ########
+###### MINLP Validation ########
+
+function constraint_dc_droop_control_binary(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw, :convdc, i)
+    bus = _PM.ref(pm, nw, :busdc, conv["busdc_i"])
+
+    if conv["type_dc"] == 2
+       # _PMACDC.constraint_dc_voltage_magnitude_setpoint(pm, i)
+       # _PMACDC.constraint_reactive_conv_setpoint(pm, i)
+    elseif conv["type_dc"] == 3
+        constraint_dc_droop_control_binary(pm, nw, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"], conv["Vmmin"], conv["Vmmax"], conv["Vdclow"], conv["Vdchigh"])
+    end 
+end
+
+function constraint_dc_droop_control_binary(pm::_PM.AbstractACPModel, n::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh)
+    pconv_dc = _PM.var(pm, n, :pconv_dc, i)
+    vdc = _PM.var(pm, n, :vdcm, busdc_i)
+    xd_a = _PM.var(pm, n, :xd_a, i)
+    xd_b = _PM.var(pm, n, :xd_b, i)
+    xd_c = _PM.var(pm, n, :xd_c, i)
+    xd_d = _PM.var(pm, n, :xd_d, i)
+    xd_e = _PM.var(pm, n, :xd_e, i)
+    epsilon = 1E-12
+
+
+    JuMP.@constraint(pm.model, pconv_dc == pref_dc 
+                                            + xd_a * (1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) )
+                                            + xd_b * (1 / k_droop * (vdchigh - vdc)) 
+                                            + xd_c * 0
+                                            + xd_d * (1 / k_droop * (vdclow - vdc))
+                                            + xd_e * (1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin))
+                                            )
+    JuMP.@constraint(pm.model, xd_a + xd_b + xd_c + xd_d + xd_e == 1)
+    JuMP.@constraint(pm.model, vdc >= vdcmax * xd_a + (vdchigh + epsilon) * xd_b + vdclow * xd_c + (vdcmin + epsilon) *xd_d)
+    JuMP.@constraint(pm.model, vdc <= (vdcmax - epsilon) * xd_b + vdchigh * xd_c + (vdclow - epsilon) * xd_d + vdcmin * xd_e)
 
 end
 
 
-#####################  ############################################################################################################################################################################
+function constraint_gen_power_real_response_binary(pm::_PM.AbstractPowerModel, i::Int; nw_1::Int=_PM.nw_id_default, nw_2::Int=_PM.nw_id_default)
+    gen = _PM.ref(pm, nw_2, :gen, i)
+    constraint_gen_power_real_response_binary(pm, nw_1, nw_2, i, gen["alpha"])
+end
+
+function constraint_gen_power_real_response_binary(pm::_PM.AbstractPowerModel, nw_1::Int, nw_2::Int, i::Int, alpha)
+    pg_base = _PM.var(pm, :pg, i, nw=nw_1)
+    pg = _PM.var(pm, :pg, i, nw=nw_2)
+    pgub = JuMP.upper_bound(_PM.var(pm, :pg, i, nw=nw_1))
+    pglb = JuMP.lower_bound(_PM.var(pm, :pg, i, nw=nw_1))
+    delta = _PM.var(pm, :delta, nw=nw_2)
+    xp_u = _PM.var(pm, :xp_u, i, nw=nw_2)
+    xp_l = _PM.var(pm, :xp_l, i, nw=nw_2)
+    bigM_u = 1E3
+    bigM_l = 1E3
+
+    JuMP.@constraint(pm.model, pgub - pg <= bigM_u * xp_u)
+    JuMP.@constraint(pm.model, pg - pglb <= bigM_u * xp_l)
+    JuMP.@constraint(pm.model, pg_base + alpha * delta - pg <= bigM_l * (1 - xp_u))
+    JuMP.@constraint(pm.model, pg - pg_base - alpha * delta <= bigM_l * (1 - xp_l))
+end
 
 
+function constraint_gen_power_reactive_response_binary(pm::_PM.AbstractPowerModel, i::Int; nw_1::Int=_PM.nw_id_default, nw_2::Int=_PM.nw_id_default)
+    gen_id = _PM.ref(pm, :bus_gens, nw=nw_2, i)
+    if haskey(_PM.ref(pm, nw_2, :gen), gen_id[1])
+        gen = _PM.ref(pm, nw_2, :gen, _PM.ref(pm, :bus_gens, nw=nw_2, i)[1])
+        constraint_gen_power_reactive_response_binary(pm, nw_1, nw_2, i)
+    # else
+        # _PMSC.constraint_c1_voltage_magnitude_link(pm, i, nw_1=0, nw_2=nw_2)
+    end
+end
 
 
-
-
-
-
+""
+function constraint_gen_power_reactive_response_binary(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int)
+    vm_1 = _PM.var(pm, n_1, :vm, i)
+    vm_2 = _PM.var(pm, n_2, :vm, i)
+    gen_id = _PM.ref(pm, :bus_gens, nw=n_2, i)[1]
+    qg = _PM.var(pm, :qg, gen_id, nw=n_2)
+    qgub = JuMP.upper_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
+    qglb = JuMP.lower_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
+    xq_u = _PM.var(pm, :xp_u, i, nw=n_2)
+    xq_l = _PM.var(pm, :xp_l, i, nw=n_2)
+    bigM_u = 1E3
+    bigM_l = 1E3
+    
+    JuMP.@constraint(pm.model, qgub - qg <= bigM_u * xq_u)
+    JuMP.@constraint(pm.model, qg - qglb <= bigM_u * xq_l)
+    JuMP.@constraint(pm.model, vm_1 - vm_2 <= bigM_l * (1 - xq_u))
+    JuMP.@constraint(pm.model, vm_2 - vm_1 <= bigM_l * (1 - xq_l))
+end
 
 
 

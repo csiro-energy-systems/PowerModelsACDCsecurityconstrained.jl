@@ -29,6 +29,8 @@ function post_acdcreopf_ots_oltc_pst(pm::_PM.AbstractPowerModel)
     _PMACDC.variable_dc_converter(pm)
     _PMACDC.variable_dcgrid_voltage_magnitude(pm)
 
+    variable_dc_droop_control(pm)
+
     _PM.constraint_model_voltage_on_off(pm)
     
     #_PM.constraint_model_voltage(pm)
@@ -64,8 +66,12 @@ function post_acdcreopf_ots_oltc_pst(pm::_PM.AbstractPowerModel)
         if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1
             _PMACDC.constraint_conv_firing_angle(pm, i)
         end
+        constraint_dc_droop_control(pm, i)
     end
     
+    pabsp = _PM.var(pm, :pgabsp)
+    pabsn = _PM.var(pm, :pgabsn)
+
     for i in _PM.ids(pm, :gen)
         p = _PM.var(pm, :pg, i)
         pabsp = _PM.var(pm, :pgabsp, i)
@@ -75,9 +81,6 @@ function post_acdcreopf_ots_oltc_pst(pm::_PM.AbstractPowerModel)
         JuMP.@constraint(pm.model, pabsp - pabsn == pref - p )
     end
  
-    pabsp = _PM.var(pm, :pgabsp)
-    pabsn = _PM.var(pm, :pgabsn)
-
     JuMP.@objective(pm.model, Min,
     sum( pabsp[i] + pabsn[i] for (i, gen) in _PM.ref(pm, :gen) )
                     )
@@ -161,7 +164,7 @@ function constraint_ohms_y_oltc_pst_to_on_off(pm::_PM.AbstractACPModel, n::Int, 
     q_to  = _PM.var(pm, n,  :q, t_idx)
     vm_fr = _PM.var(pm, n, :vm, f_bus)
     vm_to = _PM.var(pm, n, :vm, t_bus)
-    va_fr = _PM.var(pm, n, :va, f_bus)
+    va_fr = _PM.var(pm, n, :va, f_bus)   
     va_to = _PM.var(pm, n, :va, t_bus)
     tm = _PM.var(pm, n, :tm, f_idx[1])
     ta = _PM.var(pm, n, :ta, f_idx[1])
@@ -176,3 +179,91 @@ end
 
 
 
+""
+function run_acdcreopf_oltc_pst(file::String, model_type::Type, solver; kwargs...)
+    data = _PM.parse_file(file)
+    PowerModelsACDC.process_additional_data!(data)
+    return run_acdcreopf_oltc_pst(data, model_type, solver; ref_extensions = [_PMACDC.add_ref_dcgrid!], kwargs...)
+end
+
+""
+function run_acdcreopf_oltc_pst(data::Dict{String,Any}, model_type::Type, solver; kwargs...)
+    return _PM.solve_model(data, model_type, solver, post_acdcreopf_oltc_pst; ref_extensions=[_PMACDC.add_ref_dcgrid!], kwargs...)
+end
+
+""
+function post_acdcreopf_oltc_pst(pm::_PM.AbstractPowerModel)
+    #_PM.variable_branch_indicator(pm)
+    #_PM.variable_bus_voltage_on_off(pm)
+
+    #_PM.variable_branch_transform(pm)
+
+    _PM.variable_bus_voltage(pm)
+    _PM.variable_gen_power(pm)
+    _PM.variable_branch_power(pm)
+
+    variable_absolute_gen_power_real(pm)
+    #variable_branchdc_indicator(pm)
+    
+    _PMACDC.variable_active_dcbranch_flow(pm)
+    _PMACDC.variable_dcbranch_current(pm)
+    _PMACDC.variable_dc_converter(pm)
+    _PMACDC.variable_dcgrid_voltage_magnitude(pm)
+
+    variable_dc_droop_control(pm)
+
+    #_PM.constraint_model_voltage_on_off(pm)
+    
+    _PM.constraint_model_voltage(pm)
+    _PMACDC.constraint_voltage_dc(pm)
+
+    for i in _PM.ids(pm, :ref_buses)
+        _PM.constraint_theta_ref(pm, i)
+    end
+
+    for i in _PM.ids(pm, :bus)
+        _PMACDC.constraint_power_balance_ac(pm, i)
+    end
+
+    for i in _PM.ids(pm, :branch)
+        _PM.constraint_ohms_yt_from(pm, i)
+        _PM.constraint_ohms_yt_to(pm, i)
+        _PM.constraint_voltage_angle_difference(pm, i)
+        _PM.constraint_thermal_limit_from(pm, i)
+        _PM.constraint_thermal_limit_to(pm, i)
+    end
+    for i in _PM.ids(pm, :busdc)
+        _PMACDC.constraint_power_balance_dc(pm, i)
+    end
+    for i in _PM.ids(pm, :branchdc)
+        _PMACDC.constraint_ohms_dc_branch(pm, i)
+    end
+    for i in _PM.ids(pm, :convdc)
+        _PMACDC.constraint_converter_losses(pm, i)
+        _PMACDC.constraint_converter_current(pm, i)
+        _PMACDC.constraint_conv_transformer(pm, i)
+        _PMACDC.constraint_conv_reactor(pm, i)
+        _PMACDC.constraint_conv_filter(pm, i)
+        if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1
+            _PMACDC.constraint_conv_firing_angle(pm, i)
+        end
+        constraint_dc_droop_control(pm, i)
+    end
+    
+    pabsp = _PM.var(pm, :pgabsp)
+    pabsn = _PM.var(pm, :pgabsn)
+
+    for i in _PM.ids(pm, :gen)
+        p = _PM.var(pm, :pg, i)
+        pabsp = _PM.var(pm, :pgabsp, i)
+        pabsn = _PM.var(pm, :pgabsn, i)
+        pref = _PM.ref(pm, :gen, i, "pgref")
+
+        JuMP.@constraint(pm.model, pabsp - pabsn == pref - p )
+    end
+ 
+
+    JuMP.@objective(pm.model, Min,
+    sum( pabsp[i] + pabsn[i] for (i, gen) in _PM.ref(pm, :gen) )
+                    )
+end

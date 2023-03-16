@@ -10,9 +10,11 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
     time_start = time()
     result_scopf = Dict{String,Any}()
+    solution_mp = Dict()
     network["gen_cont_vio"] = 0.0
     network["branch_cont_vio"] = 0.0
     network["branchdc_cont_vio"] = 0.0
+    network["convdc_cont_vio"] = 0.0
 
     network_base = deepcopy(network)
     network_active = deepcopy(network)
@@ -20,13 +22,15 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     network_active["gen_contingencies"] = []
     network_active["branch_contingencies"] = []
     network_active["branchdc_contingencies"] = []
+    network_active["convdc_contingencies"] = []
 
     result_scopf["gen_contingencies_unsecure"] = []
     result_scopf["branch_contingencies_unsecure"] = []
     result_scopf["branchdc_contingencies_unsecure"] = []
+    result_scopf["convdc_contingencies_unsecure"] = []
 
     multinetwork = build_ACDC_scopf_multinetwork(network_active)
-    result = run_scopf(multinetwork, model_type, optimizer; setting = setting)
+    result = run_scopf_prob(multinetwork, model_type, optimizer; setting = setting)
     result_scopf["base"] = result  
     
     if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
@@ -38,6 +42,15 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
     _PM.update_data!(network_base, solution)
     _PM.update_data!(network_active, solution)
+    for (i, branch) in network_base["branch"]
+        branch["tap"] = solution["branch"][i]["tm"]
+        branch["shift"] = solution["branch"][i]["ta"]
+    end
+    for (i, branch) in network_active["branch"]
+        branch["tap"] = solution["branch"][i]["tm"]
+        branch["shift"] = solution["branch"][i]["ta"]
+    end
+
 
     result["iterations"] = 0
 
@@ -48,15 +61,17 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
         contingencies = check_contingency_violations(network_base, model_type, optimizer, setting, contingency_limit=iteration)    
         #println(contingencies)
-        result_scopf["$iteration"] = Dict{String,Any}()
-        result_scopf["$iteration"]["sol_c"] = contingencies.results_c                               # post-contingency results 
+        # result_scopf["$iteration"] = Dict{String,Any}()
+        # result_scopf["$iteration"]["sol_c"] = contingencies.results_c                               # post-contingency results 
 
         contingencies_found = 0
         #append!(network_active["gen_contingencies"], contingencies.gen_contingencies)
         for cont in contingencies.gen_contingencies
             if cont in network_active["gen_contingencies"]
                 _PMSC.warn(_LOGGER, "generator contingency $(cont.label) is active but not secure")
-                push!(result_scopf["gen_contingencies_unsecure"], cont)
+                if !(cont in result_scopf["gen_contingencies_unsecure"])
+                    push!(result_scopf["gen_contingencies_unsecure"], cont)
+                end
             else
                 push!(network_active["gen_contingencies"], cont)
                 network_active["gen_cont_vio"] += contingencies.gen_cut_vio
@@ -68,7 +83,9 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         for cont in contingencies.branch_contingencies
             if cont in network_active["branch_contingencies"]
                 _PMSC.warn(_LOGGER, "branch contingency $(cont.label) is active but not secure")
-                push!(result_scopf["branch_contingencies_unsecure"], cont) 
+                if !(cont in result_scopf["branch_contingencies_unsecure"])
+                    push!(result_scopf["branch_contingencies_unsecure"], cont) 
+                end
             else
                 push!(network_active["branch_contingencies"], cont)
                 network_active["branch_cont_vio"] += contingencies.branch_cut_vio
@@ -80,10 +97,26 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         for cont in contingencies.branchdc_contingencies
             if cont in network_active["branchdc_contingencies"]
                 _PMSC.warn(_LOGGER, "branchdc contingency $(cont.label) is active but not secure")
-                push!(result_scopf["branchdc_contingencies_unsecure"], cont)
+                if !(cont in result_scopf["branchdc_contingencies_unsecure"])
+                    push!(result_scopf["branchdc_contingencies_unsecure"], cont)
+                end
             else
                 push!(network_active["branchdc_contingencies"], cont)
                 network_active["branchdc_cont_vio"] += contingencies.branchdc_cut_vio
+                contingencies_found += 1
+            end
+        end
+
+        #append!(network_active["convdc_contingencies"], contingencies.convdc_contingencies)
+        for cont in contingencies.convdc_contingencies
+            if cont in network_active["convdc_contingencies"]
+                _PMSC.warn(_LOGGER, "convdc contingency $(cont.label) is active but not secure")
+                if !(cont in result_scopf["convdc_contingencies_unsecure"])
+                    push!(result_scopf["convdc_contingencies_unsecure"], cont)
+                end
+            else
+                push!(network_active["convdc_contingencies"], cont)
+                network_active["convdc_cont_vio"] += contingencies.convdc_cut_vio
                 contingencies_found += 1
             end
         end
@@ -96,7 +129,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         end
 
 
-        _PMSC.info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"])), branchdc $(length(network_active["branchdc_contingencies"]))")   #Update_GM
+        _PMSC.info(_LOGGER, "active contingencies: gen $(length(network_active["gen_contingencies"])), branch $(length(network_active["branch_contingencies"])), branchdc $(length(network_active["branchdc_contingencies"])), convdc $(length(network_active["convdc_contingencies"]))")   #Update_GM
 
         time_solve_start = time()
         #_PMACDC.fix_data!(network_active)
@@ -114,11 +147,20 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         #     end
         # end
         _PMSC.info(_LOGGER, "objective: $(result["objective"])")
+        solution_mp = result
         solution = result["solution"]["nw"]["0"]
         solution["per_unit"] = result["solution"]["per_unit"]
 
         _PM.update_data!(network_base, solution)
         _PM.update_data!(network_active, solution)
+        for (i, branch) in network_base["branch"]
+            branch["tap"] = solution["branch"][i]["tm"]
+            branch["shift"] = solution["branch"][i]["ta"]
+        end
+        for (i, branch) in network_active["branch"]
+            branch["tap"] = solution["branch"][i]["tm"]
+            branch["shift"] = solution["branch"][i]["ta"]
+        end
 
         time_iteration = time() - time_start_iteration
         time_remaining = time_limit - (time() - time_start)
@@ -126,11 +168,14 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             _PMSC.warn(_LOGGER, "insufficent time for next iteration, time remaining $(time_remaining), estimated iteration time $(time_iteration)")
             break
         end
+
+        result_scopf["vio"] = contingencies.results_c
         iteration += 1
     end
 
-    result["solution"] = solution
-    result["iterations"] = iteration
-    result_scopf["final"] = result                                                      
+    #result["solution"] = solution
+    #result["iterations"] = iteration
+    result_scopf["final"] = solution_mp 
+    #result_scopf["final"] = result                                                      
     return result_scopf
 end
