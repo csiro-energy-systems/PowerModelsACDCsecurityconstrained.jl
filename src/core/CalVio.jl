@@ -47,10 +47,10 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 qg_vio += gen_sol["qg"] - gen["qmax"]
             end
             ####
-            if pg_vio !==0.0 || qg_vio !==0.0
-                push!(vio_data["genp"], (i, pg_vio))
-                push!(vio_data["genq"], (i, qg_vio))
-            end
+            # if pg_vio !==0.0 || qg_vio !==0.0
+            #     push!(vio_data["genp"], (i, pg_vio))
+            #     push!(vio_data["genq"], (i, qg_vio))
+            # end
             ####
         end
     end
@@ -78,17 +78,19 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 if s_fr > rating
                     sm_vio += s_fr - rating
                     #vio_flag = true
+                    push!(vio_data["branchv"], (i, s_fr - rating))
                 end
                 if s_to > rating
                     sm_vio += s_to - rating
                     #vio_flag = true
+                    push!(vio_data["branchv"], (i, s_to - rating))
                 end
                 #if vio_flag
                 #    info(_LOGGER, "$(i), $(branch["f_bus"]), $(branch["t_bus"]): $(s_fr) / $(s_to) <= $(branch["rate_c"])")
                 #end
-                if sm_vio !==0.0 
-                    push!(vio_data["branchv"], (i, sm_vio))
-                end
+                # if sm_vio !==0.0 
+                #     push!(vio_data["branchv"], (i, sm_vio))
+                # end
                 ####
             end
         end
@@ -112,17 +114,19 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 if s_fr > rating
                     smdc_vio += s_fr - rating
                     #vio_flag = true
+                    push!(vio_data["branchdcv"], (i, s_fr - rating))
                 end
                 if s_to > rating
                     smdc_vio += s_to - rating
                     #vio_flag = true
+                    push!(vio_data["branchdcv"], (i, s_to - rating))
                 end
                 #if vio_flag
                 #    info(_LOGGER, "$(i), $(branchdc["f_bus"]), $(branchdc["t_bus"]): $(s_fr) / $(s_to) <= $(branchdc["rateC"])")
                 #end
-                if smdc_vio !==0.0 
-                    push!(vio_data["branchdcv"], (i, smdc_vio))
-                end
+                # if smdc_vio !==0.0 
+                #     push!(vio_data["branchdcv"], (i, smdc_vio))
+                # end
             end
         end
     end

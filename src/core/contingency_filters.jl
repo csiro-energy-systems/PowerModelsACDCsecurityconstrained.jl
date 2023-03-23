@@ -18,7 +18,7 @@ function check_contingency_violations(network, model_type, optimizer, setting;
 
     network_lal = deepcopy(network)     # lal -> losses as loads
 
-    ref_bus_id = _PM.reference_bus(network_lal)["index"]
+    #ref_bus_id = _PM.reference_bus(network_lal)["index"]
 
     gen_pg_init = Dict(i => gen["pg"] for (i,gen) in network_lal["gen"])
 

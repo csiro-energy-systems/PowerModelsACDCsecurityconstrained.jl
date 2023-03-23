@@ -242,6 +242,7 @@ function objective_min_fuel_cost_scopf_soft_pwl(pm::_PM.AbstractPowerModel; kwar
             sum( 5e5*_PM.var(pm, n, :i_conv_vio, i) for i in _PM.ids(pm, n, :convdc) ) 
             for (n, nw_ref) in _PM.nws(pm) )
     )
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :pg_cost, _PM.ids(pm, nw, :gen), pg_cost)
 end
 
 
@@ -289,6 +290,7 @@ function objective_min_fuel_cost_scopf_soft_polynomial_linquad(pm::_PM.AbstractP
             sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :busdc)) )
         for (n, nw_ref) in _PM.nws(pm))
     )
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :gen_cost, _PM.ids(pm, nw, :gen), gen_cost)
 end
 
 
@@ -340,6 +342,7 @@ function objective_min_fuel_cost_scopf_soft_polynomial_nl(pm::_PM.AbstractPowerM
                 sum( 5e5*pb_dc_pos_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :busdc)) )
         for (n, nw_ref) in _PM.nws(pm))
     )
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :gen_cost, _PM.ids(pm, nw, :gen), gen_cost)
 end
 
 

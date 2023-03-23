@@ -358,7 +358,7 @@ function variable_generator_reactive_power_bounds(pm::_PM.AbstractPowerModel; nw
     #         JuMP.set_upper_bound(qglb[i], 10.0)
     #     end
     # end
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :qglb, _PM.ids(pm, nw, :gen), qglb)
+    #report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :qglb, _PM.ids(pm, nw, :gen), qglb)
 end
 
 function variable_dc_converter_n(pm::_PM.AbstractPowerModel; kwargs...)

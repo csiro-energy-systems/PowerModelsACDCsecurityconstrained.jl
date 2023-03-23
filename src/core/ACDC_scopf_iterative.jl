@@ -5,7 +5,7 @@ violated contingencies and resolving until a fixed-point is reached.
 """
 function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)   
     if _IM.ismultinetwork(network)
-        error(_LOGGER, "run_ACDC_scopf_contigency_cuts can only be used on single networks")
+        Memento.error(_LOGGER, "run_ACDC_scopf_contigency_cuts can only be used on single networks")
     end
 
     time_start = time()
@@ -34,7 +34,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     result_scopf["base"] = result  
     
     if !(result["termination_status"] == _PM.OPTIMAL || result["termination_status"] == _PM.LOCALLY_SOLVED || result["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
-        error(_LOGGER, "base-case ACDC SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
+        Memento.error(_LOGGER, "base-case ACDC SCOPF solve failed in run_c1_scopf_contigency_cuts, status $(result["termination_status"])")
     end
     #_PM.print_summary(result["solution"])
     solution = result["solution"]["nw"]["0"]
@@ -168,7 +168,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             _PMSC.warn(_LOGGER, "insufficent time for next iteration, time remaining $(time_remaining), estimated iteration time $(time_iteration)")
             break
         end
-
+        result_scopf["itr_time"] = time_iteration
         result_scopf["vio"] = contingencies.results_c
         iteration += 1
     end
