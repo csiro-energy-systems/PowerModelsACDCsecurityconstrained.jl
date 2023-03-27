@@ -67,6 +67,8 @@ module PowerModelsACDCsecurityconstrained
     include("core/ACDC_re_dispatch_ots_oltc_pst.jl")    # Re-dispatch + ots + oltc + pst
 
     include("core/checkscopf.jl") # Temporary to check & verify 
-    
+
+
+    include("core/re_dispatch_algo.jl") 
 
 end # module

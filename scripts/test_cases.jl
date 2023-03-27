@@ -22,41 +22,59 @@ const PM_sc = PowerModelsSecurityConstrained
 const PM_acdc_sc = PowerModelsACDCsecurityconstrained
 
 
-nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "tol"=>1e-6)  
+nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "max_cpu_time" => 3600.0)  # "print_level"=>0, "tol"=>1e-6
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
 mip_solver = optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
 minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_solver, "mip_solver"=>mip_solver)
 # scip_solver = optimizer_with_attributes(SCIP.Optimizer)
 ########################################### case5_acdc_scopf.m ##########################################
-# file = "./data/case5_acdc_scopf.m"
-# data = parse_file(file)
+file = "./data/case5_acdc_scopf.m"
+data = parse_file(file)
 
-# idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
-# idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
-# idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
-# idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
-# labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
+idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
+idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
+idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
+idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
+labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
 
-# data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
-# data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
-# data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
-# data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
+data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
+data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
+data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
+data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
 
-# data["area_gens"] = Dict{Int64, Set{Int64}}()
-# data["area_gens"][1] = Set([1])
+data["convdc_contingencies"] = Vector{Any}(undef, 3)
+data["convdc_contingencies"][1] = (idx = 1, label = "13", type = "convdc")
+data["convdc_contingencies"][2] = (idx = 2, label = "14", type = "convdc")
+data["convdc_contingencies"][3] = (idx = 3, label = "15", type = "convdc")
 
-# data["contingencies"] = []  # This to empty the existing contingencies in the data
+data["area_gens"] = Dict{Int64, Set{Int64}}()
+data["area_gens"][1] = Set([2, 1])
 
-# for i=1:length(data["gen"])
-#     data["gen"]["$i"]["ep"] = 1e-1
-# end
+data["contingencies"] = []  # This to empty the existing contingencies in the data
 
-# for i=1:length(data["convdc"])
-#     data["convdc"]["$i"]["ep"] = 1e-1
-# end
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["ep"] = 1e-1
+end
 
-# data["gen"]["1"]["alpha"] = 15.92 
-# data["gen"]["2"]["alpha"] = 11.09 
+for i=1:length(data["convdc"])
+    data["convdc"]["$i"]["ep"] = 1e-1
+end
+
+data["gen"]["1"]["alpha"] = 15.92 
+data["gen"]["2"]["alpha"] = 11.09 
+
+for i=1:length(data["branch"])
+    if data["branch"]["$i"]["tap"] !== 1 
+        data["branch"]["$i"]["tm_min"] = 0.9
+        data["branch"]["$i"]["tm_max"] = 1.1
+    end
+    data["branch"]["$i"]["ta_min"] = 0.0
+    data["branch"]["$i"]["ta_max"] = 0.0
+    if data["branch"]["$i"]["tap"] == 1 
+        data["branch"]["$i"]["tm_min"] = 1
+        data["branch"]["$i"]["tm_max"] = 1
+    end
+end
 
 # data["branch"]["1"]["tm_min"] = 0.9; data["branch"]["1"]["tm_max"] = 1.1; data["branch"]["1"]["ta_min"] = 0.0;   data["branch"]["1"]["ta_max"] = 0.0
 # data["branch"]["2"]["tm_min"] = 0.9; data["branch"]["2"]["tm_max"] = 1.1; data["branch"]["2"]["ta_min"] = 0.0;   data["branch"]["2"]["ta_max"] = 0.0
@@ -67,44 +85,44 @@ minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_sol
 # data["branch"]["6"]["tm_min"] = 1;   data["branch"]["6"]["tm_max"] = 1;   data["branch"]["6"]["ta_min"] = 0.0;   data["branch"]["6"]["ta_max"] = 0.0
 # data["branch"]["7"]["tm_min"] = 1;   data["branch"]["7"]["tm_max"] = 1;   data["branch"]["7"]["ta_min"] = -15.0; data["branch"]["7"]["ta_max"] = 15.0
 
-# PM_acdc.process_additional_data!(data)
-# setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
-# data1 = deepcopy(data)
-# result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
-# result_ACDC_scopf_soft_minlp = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data1, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft_minlp, minlp_solver, setting)
+PM_acdc.process_additional_data!(data)
+setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
+data1 = deepcopy(data)
+@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+result_ACDC_scopf_soft_minlp = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data1, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft_minlp, minlp_solver, setting)
 
-# # updating reference point 
-# for i = 1:length(data["gen"])
-#     data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
-# end 
-# # embedding unsecure contingencies
-# if haskey(result_ACDC_scopf_soft, "gen_contingencies_unsecure") 
-#     for (idx, label, type) in result_ACDC_scopf_soft["gen_contingencies_unsecure"]
-#         data["gen"]["$idx"]["status"] = 0
-#     end
-# end
-# if haskey(result_ACDC_scopf_soft, "branch_contingencies_unsecure")
-#     for (idx, label, type) in result_ACDC_scopf_soft["branch_contingencies_unsecure"]
-#         data["branch"]["$idx"]["br_status"] = 0
-#     end
-# end
-# if haskey(result_ACDC_scopf_soft, "branchdc_contingencies_unsecure") 
-#     for (idx, label, type) in result_ACDC_scopf_soft["branchdc_contingencies_unsecure"]
-#         data["branchdc"]["$idx"]["status"] = 0
-#     end
-# end
-# if haskey(result_ACDC_scopf_soft, "convdc_contingencies_unsecure") 
-#     for (idx, label, type) in result_ACDC_scopf_soft["convdc_contingencies_unsecure"]
-#         data["convdc"]["$idx"]["status"] = 0
-#     end
-# end
-# data1 = deepcopy(data)
-# data1["branch"]["6"]["br_status"] = 0
-# result_ACDC_scopf_re_dispatch_oltc_pst =  PM_acdc_sc.run_acdcreopf_oltc_pst(data1, PM.ACPPowerModel, nlp_solver)
-# # Re-dispatch_ots_oltc_pst
-# data2 = deepcopy(data)
-# data2["branch"]["5"]["br_status"] = 0
-# result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_pst(data2, PM.ACPPowerModel, minlp_solver)
+# updating reference point 
+for i = 1:length(data["gen"])
+    data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+end 
+# embedding unsecure contingencies
+if haskey(result_ACDC_scopf_soft, "gen_contingencies_unsecure") 
+    for (idx, label, type) in result_ACDC_scopf_soft["gen_contingencies_unsecure"]
+        data["gen"]["$idx"]["status"] = 0
+    end
+end
+if haskey(result_ACDC_scopf_soft, "branch_contingencies_unsecure")
+    for (idx, label, type) in result_ACDC_scopf_soft["branch_contingencies_unsecure"]
+        data["branch"]["$idx"]["br_status"] = 0
+    end
+end
+if haskey(result_ACDC_scopf_soft, "branchdc_contingencies_unsecure") 
+    for (idx, label, type) in result_ACDC_scopf_soft["branchdc_contingencies_unsecure"]
+        data["branchdc"]["$idx"]["status"] = 0
+    end
+end
+if haskey(result_ACDC_scopf_soft, "convdc_contingencies_unsecure") 
+    for (idx, label, type) in result_ACDC_scopf_soft["convdc_contingencies_unsecure"]
+        data["convdc"]["$idx"]["status"] = 0
+    end
+end
+data1 = deepcopy(data)
+data1["gen"]["2"]["gen_status"] = 0
+result_ACDC_scopf_re_dispatch_oltc_pst =  PM_acdc_sc.run_acdcreopf_oltc_pst(data1, PM.ACPPowerModel, nlp_solver)
+# Re-dispatch_ots_oltc_pst
+data2 = deepcopy(data)
+data2["branch"]["5"]["br_status"] = 0
+result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_pst(data2, PM.ACPPowerModel, minlp_solver)
 
 
 # ######################################### case5_2grids_acdc_sc.m #########################################
@@ -190,36 +208,126 @@ result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_
 # file = "./data/case5_dcgrid_sc.m"
 # data = parse_file(file)
 
+# idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
+# idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
+# idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
+# idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
+# labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
+
+# data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
+# data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
+# data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
+# data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
+
+# data["area_gens"] = Dict{Int64, Set{Int64}}()
+# data["area_gens"][1] = Set([2, 1])
+
+# data["contingencies"] = []  # This to empty the existing contingencies in the data
+
+# for i=1:length(data["gen"])
+#     data["gen"]["$i"]["ep"] = 1e-1
+# end
+
+# for i=1:length(data["convdc"])
+#     data["convdc"]["$i"]["ep"] = 1e-1
+# end
+
+# data["gen"]["1"]["alpha"] = 15.92 
+# data["gen"]["2"]["alpha"] = 11.09 
+
+
+# for i=1:length(data["branch"])
+#     data["branch"]["$i"]["tm_min"] = 1
+#     data["branch"]["$i"]["tm_max"] = 1
+#     data["branch"]["$i"]["ta_min"] = 0.0
+#     data["branch"]["$i"]["ta_max"] = 0.0
+# end
 # for i=1:length(data["convdc"])
 #     data["convdc"]["$i"]["ep"] = 1e-1
 #     data["convdc"]["$i"]["Vdclow"] = 0.98
 #     data["convdc"]["$i"]["Vdchigh"] = 1.02
-# end  
-
+# end
 
 # PM_acdc.process_additional_data!(data)
 # setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
 
-# resultpf_droop = PM_acdc_sc.run_acdcpf_GM( data, PM.ACPPowerModel, nlp_solver; setting = setting)
-# result_droop = PM_acdc_sc.run_acdcopf_droop( data, PM.ACPPowerModel, nlp_solver; setting = setting)
+# @time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+
+# # updating reference point 
+# for i = 1:length(data["gen"])
+#     data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+# end 
+# # Re-dispatch_oltc_pst
+# data1 = deepcopy(data)
+# data1["branch"]["8"]["br_status"] = 0
+# result_ACDC_scopf_re_dispatch_oltc_pst =  PM_acdc_sc.run_acdcreopf_oltc_pst(data1, PM.ACPPowerModel, nlp_solver)
+# # Re-dispatch_ots_oltc_pst
+# data2 = deepcopy(data)
+# data2["branch"]["8"]["br_status"] = 0
+# result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_pst(data2, PM.ACPPowerModel, minlp_solver)
 
 # ############################################# case5_b2bdc_sc.m #############################################
-# file = "./data/case5_b2bdc_sc.m"
-# data = parse_file(file)
+file = "./data/case5_b2bdc_sc.m"
+data = parse_file(file)
 
-# for i=1:length(data["convdc"])
-#     data["convdc"]["$i"]["ep"] = 1e-1
-#     data["convdc"]["$i"]["Vdclow"] = 0.98
-#     data["convdc"]["$i"]["Vdchigh"] = 1.02
-# end  
+idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
+idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
+idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
+idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
+labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
+
+data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
+data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
+data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
+data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
+
+data["area_gens"] = Dict{Int64, Set{Int64}}()
+data["area_gens"][1] = Set([2, 1])
+
+data["contingencies"] = []  # This to empty the existing contingencies in the data
+
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["ep"] = 1e-1
+end
+
+for i=1:length(data["convdc"])
+    data["convdc"]["$i"]["ep"] = 1e-1
+end
+
+data["gen"]["1"]["alpha"] = 15.92 
+data["gen"]["2"]["alpha"] = 11.09 
 
 
-# PM_acdc.process_additional_data!(data)
-# data["busdc"]["1"]["Pdc"] = 1
-# setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+for i=1:length(data["branch"])
+    data["branch"]["$i"]["tm_min"] = 1
+    data["branch"]["$i"]["tm_max"] = 1
+    data["branch"]["$i"]["ta_min"] = 0.0
+    data["branch"]["$i"]["ta_max"] = 0.0
+end
+for i=1:length(data["convdc"])
+    data["convdc"]["$i"]["ep"] = 1e-1
+    data["convdc"]["$i"]["Vdclow"] = 0.98
+    data["convdc"]["$i"]["Vdchigh"] = 1.02
+end
 
-# resultpf_droop = PM_acdc_sc.run_acdcpf_GM( data, PM.ACPPowerModel, nlp_solver; setting = setting)
-# result_droop = PM_acdc_sc.run_acdcopf_droop( data, PM.ACPPowerModel, nlp_solver; setting = setting)
+PM_acdc.process_additional_data!(data)
+setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+
+@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+
+# updating reference point 
+for i = 1:length(data["gen"])
+    data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+end 
+# Re-dispatch_oltc_pst
+data1 = deepcopy(data)
+data1["branch"]["1"]["br_status"] = 0
+result_ACDC_scopf_re_dispatch_oltc_pst =  PM_acdc_sc.run_acdcreopf_oltc_pst(data1, PM.ACPPowerModel, nlp_solver)
+# Re-dispatch_ots_oltc_pst
+data2 = deepcopy(data)
+data2["branch"]["2"]["br_status"] = 0
+result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_pst(data2, PM.ACPPowerModel, minlp_solver)
+
 
 # ############################################# case24_3zones_acdc_sc.m #############################################
 
@@ -257,21 +365,107 @@ result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_
 # result_droop = PM_acdc_sc.run_acdcopf_droop( data, PM.ACPPowerModel, nlp_solver; setting = setting)
 
 # ############################################# pglib_opf_case588_sdet_acdc_sc.m #############################################
-# file = "./data/pglib_opf_case588_sdet_acdc_sc.m"
-# data = parse_file(file)
+file = "./data/pglib_opf_case588_sdet_acdc_sc.m"
+data = parse_file(file)
 
-# for i=1:length(data["convdc"])
-#     data["convdc"]["$i"]["ep"] = 0.1
-#     data["convdc"]["$i"]["Vdclow"] = 0.98
-#     data["convdc"]["$i"]["Vdchigh"] = 1.02
-# end  
+idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
+idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
+idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
+idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
+labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
 
-# PM_acdc.process_additional_data!(data)
-# setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
+data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
+data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
+data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
 
-# resultpf_droop = PM_acdc_sc.run_acdcpf_GM( data, PM.ACPPowerModel, nlp_solver; setting = setting)
+gen1 =[]
+gen2 =[]
+gen3 =[]
+gen4 =[]
+gen5 =[]
+gen6 =[]
+gen7 =[]
+gen8 =[]
 
-# result_droop = PM_acdc_sc.run_acdcopf_droop( data, PM.ACPPowerModel, nlp_solver; setting = setting)
+for (i, gen) in data["gen"]
+    if gen["gen_bus"] <= 65
+        if !(gen["index"] in gen1)
+            push!(gen1, gen["index"]) 
+        end
+    elseif gen["gen_bus"] <= 130
+        if !(gen["index"] in gen2)
+            push!(gen2, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 180
+        if !(gen["index"] in gen3)
+            push!(gen3, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 230
+        if !(gen["index"] in gen4)
+            push!(gen4, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 351
+        if !(gen["index"] in gen5)
+            push!(gen5, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 418
+        if !(gen["index"] in gen6)
+            push!(gen6, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 535
+        if !(gen["index"] in gen7)
+            push!(gen7, gen["index"])
+        end
+    elseif gen["gen_bus"] <= 588
+        if !(gen["index"] in gen8)
+        push!(gen8, gen["index"])
+        end
+    end
+end
+
+
+data["area_gens"] = Dict{Int64, Set{Int64}}()
+data["area_gens"][1] = Set([21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+data["area_gens"][2] = Set([42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22])
+data["area_gens"][3] = Set([60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43])
+data["area_gens"][4] = Set([78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61])
+data["area_gens"][5] = Set([94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79])
+data["area_gens"][6] = Set([130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 96, 95])
+data["area_gens"][7] = Set([150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 136, 135, 134, 133, 132, 131])
+data["area_gens"][8] = Set([167, 166, 165, 164, 163, 162, 161, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151])
+
+data["contingencies"] = []  # This to empty the existing contingencies in the data
+
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["ep"] = 1e-1
+end
+
+for i=1:length(data["convdc"])
+    data["convdc"]["$i"]["ep"] = 1e-1
+    data["convdc"]["$i"]["Vdclow"] = 0.98
+    data["convdc"]["$i"]["Vdchigh"] = 1.02
+end
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["alpha"] = 15.92
+end 
+
+for i=1:length(data["branch"])
+    if data["branch"]["$i"]["tap"] !== 1 
+        data["branch"]["$i"]["tm_min"] = 0.9
+        data["branch"]["$i"]["tm_max"] = 1.1
+    end
+    data["branch"]["$i"]["ta_min"] = 0.0
+    data["branch"]["$i"]["ta_max"] = 0.0
+    if data["branch"]["$i"]["tap"] == 1 
+        data["branch"]["$i"]["tm_min"] = 1
+        data["branch"]["$i"]["tm_max"] = 1
+    end
+end
+
+PM_acdc.process_additional_data!(data)
+setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
 # ############################################# case3120sp_acdc_sc.m #############################################
 file = "./data/case3120sp_acdc_sc.m"
@@ -375,8 +569,10 @@ data["convdc_contingencies"][4] = (idx = 7, label = "39", type = "convdc")
 data["gen_contingencies"] = []
 
 data["area_gens"] = Dict{Int64, Set{Int64}}()
-data["area_gens"][1] = Set([4, 3, 2, 1])
-
+data["area_gens"][1] = Set([8, 7, 6, 5, 4, 3, 2, 1])
+data["area_gens"][2] = Set([14, 13, 12, 11, 10, 9])
+data["area_gens"][3] = Set([19, 18, 17, 16, 15])
+data["area_gens"][4] = Set([20])
 data["contingencies"] = []  # This to empty the existing contingencies in the data
 
 for i=1:length(data["gen"])
@@ -414,7 +610,7 @@ data["gen"]["20"]["alpha"] = 1
 
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
-result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
+@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, nlp_solver, setting)
 
 ###########################################################################################################################################################################
 
@@ -505,87 +701,106 @@ result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_
 # -(-((1 / k_droop_max * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop_max * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) - vdc + 2*vdcmin - vdclow )/ep)))   )    )
   
 # ########################################################################################################################################################################################################################################################################
-# f4(vdc) = pref_dc + (   -((1 / k_droop * (vdchigh - vdc)) - ep * log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep))) 
-#         -(-(1 / k_droop * (vdcmax - vdc) ) + ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) )
-#         -((1 / k_droop * (vdclow - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep)))
-#         -(-((1 / k_droop * (vdcmin - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)))   ))
-# plot(f3, 0.8, 1.2)
+f4(vdc) = pref_dc + (   -((1 / k_droop * (vdchigh - vdc)) - ep * log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep))) 
+        -(-(1 / k_droop * (vdcmax - vdc) ) + ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) )
+        -((1 / k_droop * (vdclow - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep)))
+        -(-((1 / k_droop * (vdcmin - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)))   ))
+plot(f3, 0.8, 1.2)
 
-# # droop Curve Plot
-# plt = Plots.plot(layout=(8,4,2), size = (800,800), xformatter=:latex, yformatter=:latex)
-# sp=7
-#     i=sp+1
-#     pref_dc = data["convdc"]["$i"]["Pdcset"] 
-#     Vdcset = data["convdc"]["$i"]["Vdcset"]
-#     vdcmax = data["convdc"]["$i"]["Vmmax"]
-#     vdcmin = data["convdc"]["$i"]["Vmmin"]
-#     vdchigh = data["convdc"]["$i"]["Vdchigh"]
-#     vdclow = data["convdc"]["$i"]["Vdclow"]
-#     k_droop = data["convdc"]["$i"]["droop"]
-#     ep = data["convdc"]["$i"]["ep"]
-
-    
-#     # if pref_dc > 0
-#     #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
-#     #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
-#     # elseif pref_dc < 0
-#     #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
-#     #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
-#     # elseif pref_dc == 0
-#     #     k_droop_i = k_droop
-#     #     k_droop_r = k_droop
-#     # end
-    
-
-#     epsilon = 1E-12
+# droop Curve Plot
+plt = Plots.plot(layout=(2,1), size = (600,400), xformatter=:latex, yformatter=:latex, legend = :outertop)
+sp=1
+    i=sp
+    pref_dc = data["convdc"]["$i"]["Pdcset"] 
+    Vdcset = data["convdc"]["$i"]["Vdcset"]
+    vdcmax = data["convdc"]["$i"]["Vmmax"]
+    vdcmin = data["convdc"]["$i"]["Vmmin"]
+    vdchigh = data["convdc"]["$i"]["Vdchigh"]
+    vdclow = data["convdc"]["$i"]["Vdclow"]
+    k_droop = data["convdc"]["$i"]["droop"]
+    ep = data["convdc"]["$i"]["ep"]
 
     
-#     vdc = [nw["busdc"]["$i"]["vm"] for (j, nw) in result_ACDC_scopf_soft["final"]["solution"]["nw"]]
-#     pdc = [nw["convdc"]["$i"]["pdc"] for (j, nw) in result_ACDC_scopf_soft["final"]["solution"]["nw"]]
+    # if pref_dc > 0
+    #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
+    #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
+    # elseif pref_dc < 0
+    #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
+    #     k_droop_r = 1/ (((1/k_droop) *(vdclow - vdcmin) + pref_dc)/(vdclow - vdcmin))
+    # elseif pref_dc == 0
+    #     k_droop_i = k_droop
+    #     k_droop_r = k_droop
+    # end
     
-#     vdco =  result_ACDC_scopf_soft["base"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
-#     pdco = result_ACDC_scopf_soft["base"]["solution"]["nw"]["0"]["convdc"]["$i"]["pdc"]
-
-#     vdcf = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
-#     pdcf = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["convdc"]["$i"]["pdc"]
-
-#     vdcr1 = result_ACDC_scopf_re_dispatch_oltc_pst["solution"]["busdc"]["$i"]["vm"]
-#     pdcr1 = result_ACDC_scopf_re_dispatch_oltc_pst["solution"]["convdc"]["$i"]["pdc"]
-
-#     vdcr2 = result_ACDC_scopf_re_dispatch_ots_oltc_pst["solution"]["busdc"]["$i"]["vm"]
-#     pdcr2 = result_ACDC_scopf_re_dispatch_ots_oltc_pst["solution"]["convdc"]["$i"]["pdc"]
-
-#     pmax =  pref_dc + ((1/k_droop * (vdcmax -vdcmin))/2) + 1
-#     pmin =  pref_dc - ((1/k_droop * (vdcmax -vdcmin))/2) - 1
-
 
     
-#     vspan!([vdclow, vdchigh], linecolor = :lightgrey, fillcolor = :lightgrey, xformatter=:latex, yformatter=:latex, label = false, subplot=sp)
-#     plot!(f4, 0.85, 1.15, ylims =[pmin, pmax], linewidth=1, color="black", dpi = 300, xformatter=:latex, yformatter=:latex, label = false, legend = :false, grid = false, gridalpha = 0.5, gridstyle = :dash, subplot=sp)  #framestyle = :box  #legend_columns= -1,
-#     vline!([vdcmin, vdcmax], linestyle = :dash, linecolor = :lightgrey, xformatter=:latex, yformatter=:latex, label = false, subplot=sp)
-#     # scatter!([(vdci,pdci)],  markershape = :cross, markersize = 7, markercolor = :red, markerstrokecolor = :red, label = false, subplot=sp)
-#     scatter!([(vdco,pdco)],  markershape = :rect, markersize = 7, markercolor = :skyblue, markerstrokecolor = :orange, label =L"{\mathrm{base}}", subplot=sp)
-#     # annotate!([(vdco,pdco+1.4, (L"base\;case\;solution", :red, :left, 7))], subplot=sp)
-#     annotate!([(vdcmin,pdco, (L"v^{dc,l}_e", :black, :left, 12))], subplot=sp)
-#     annotate!([(vdcmax,pdco, (L"v^{dc,u}_e", :black, :left, 12))], subplot=sp)
-#     scatter!([(vdcf,pdcf)],  markershape = :circle, markersize = 6, markercolor = :orange, markerstrokecolor = :blue, label = L"{\mathrm{final}}", subplot=sp)
-#     # annotate!([(vdcf,pdcf+3.3, (L"final\;solution", :blue, :left, 7))], subplot=sp)
-#     scatter!([(vdc,pdc)],  markershape = :star4, markersize = 4, markercolor = :LightSkyBlue, markeralpha = 1, markerstrokecolor = :MediumPurple, label = L"{\mathrm{contingencies}}", subplot=sp)
-#     scatter!([(vdcr1,pdcr1)],  markershape = :rtriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch}}", subplot=sp)
-#     scatter!([(vdcr2,pdcr2)],  markershape = :ltriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch + OTS}}", subplot=sp)
-#     plot!(xlabel=L"{V^{\mathrm{dc}}_e(\mathrm{p.u})}", labelfontsize= 9,subplot=sp)
-#     plot!(ylabel=L"{{P^{\mathrm{cv,dc}}_c}^ϵ(\mathrm{p.u})}", labelfontsize= 9, subplot=sp)
-#     plot!(title=L"{\mathrm{Converter}\;8}", titlefontsize= 10, subplot=sp)
 
-#    # legend
-#     scatter!((1:3'), xlim = (4,5), markershape = :rect, markersize = 7, markercolor = :skyblue, markerstrokecolor = :orange, label =L"{\mathrm{base}}", legend=:topleft, framestyle = :none, subplot=8)
-#     scatter!((1:3'), xlim = (4,5), markershape = :circle, markersize = 6, markercolor = :orange, markerstrokecolor = :blue, label = L"{\mathrm{final}}", subplot=8)
-#     scatter!((1:3'), xlim = (4,5), markershape = :star4, markersize = 4, markercolor = :LightSkyBlue, markeralpha = 1, markerstrokecolor = :MediumPurple, label = L"{\mathrm{contingencies}}", subplot=8)
-#     scatter!((1:3'), xlim = (4,5), markershape = :rtriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch}}", subplot=8)
-#     scatter!((1:3'), xlim = (4,5), markershape = :ltriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch + OTS}}", subplot=8)
+    
+    vdc = [nw["busdc"]["$i"]["vm"] for (j, nw) in result_ACDC_scopf_soft["final"]["solution"]["nw"] if j !=="0"]
+    pdc = [nw["convdc"]["$i"]["pdc"] for (j, nw) in result_ACDC_scopf_soft["final"]["solution"]["nw"] if j !=="0"]
+    
+    vdco =  result_ACDC_scopf_soft["base"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
+    pdco = result_ACDC_scopf_soft["base"]["solution"]["nw"]["0"]["convdc"]["$i"]["pdc"]
+
+    vdcf = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["busdc"]["$i"]["vm"]
+    pdcf = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["convdc"]["$i"]["pdc"]
+
+    vdcr1 = result_ACDC_scopf_re_dispatch_oltc_pst["solution"]["busdc"]["3"]["vm"]
+    pdcr1 = result_ACDC_scopf_re_dispatch_oltc_pst["solution"]["convdc"]["3"]["pdc"]
+
+    vdcr2 = result_ACDC_scopf_re_dispatch_ots_oltc_pst["solution"]["busdc"]["$i"]["vm"]
+    pdcr2 = result_ACDC_scopf_re_dispatch_ots_oltc_pst["solution"]["convdc"]["$i"]["pdc"]
+
+   
+    vdcr1 = 0.9962912492340433;
+    pdcr1 = 0.36316259999999645;
+   
+    vdcr2 = 0.9963520623582386;
+    pdcr2 = 0.3631625999999969;
+   
+    vdcr4 = 0.979407677856914;
+    pdcr4 = 0.15234165140337974;
+    
+    vdcr3 = 1.0018260701520159;
+    pdcr3 = -0.15191800000000621;
+
+
+    pmax =  pref_dc + ((1/k_droop * (vdcmax -vdcmin))/2) + 1
+    pmin =  pref_dc - ((1/k_droop * (vdcmax -vdcmin))/2) - 1
+
+    using Plots.PlotMeasures
+    
+    vspan!([vdclow, vdchigh], linecolor = :grey90, fillcolor = :grey90, xformatter=:latex, yformatter=:latex, label = false, subplot=sp) # top_margin=5mm,
+    plot!(f4, 0.85, 1.15, ylims =[pmin, pmax], linewidth=1, color="black", dpi = 300, xformatter=:latex, yformatter=:latex, label = false, legend = :outertop, legend_columns= -1, grid = false, gridalpha = 0.5, gridstyle = :dash, subplot=sp)  #framestyle = :box  #legend_columns= -1,
+    vline!([vdcmin, vdcmax], linestyle = :dash, linecolor = :grey0, xformatter=:latex, yformatter=:latex, label = false, subplot=sp)
+    # scatter!([(vdci,pdci)],  markershape = :cross, markersize = 7, markercolor = :red, markerstrokecolor = :red, label = false, subplot=sp)
+    scatter!([(vdco,pdco)],  markershape = :rect, markersize = 8, markercolor = :skyblue, markerstrokecolor = :orange, label =L"{\mathrm{base}}", subplot=sp)
+    # annotate!([(vdco,pdco+1.4, (L"base\;case\;solution", :red, :left, 7))], subplot=sp)
+    annotate!([(vdcmin+0.005,pdco, (L"v^{dc,l}_e", :black, :left, 12))], subplot=sp)
+    
+    annotate!([(vdcmax+0.005,pdco, (L"v^{dc,u}_e", :black, :left, 12))], subplot=sp)
+    scatter!([(vdcf,pdcf)],  markershape = :circle, markersize = 7, markercolor = :orange, markerstrokecolor = :blue, label = L"{\mathrm{final}}", subplot=sp)
+    # annotate!([(vdcf,pdcf+3.3, (L"final\;solution", :blue, :left, 7))], subplot=sp)
+    scatter!([(vdc,pdc)],  markershape = :star4, markersize = 7, markercolor = :LightSkyBlue, markeralpha = 1, markerstrokecolor = :MediumPurple, label = L"{\mathrm{contingency}}", subplot=sp)
+    scatter!([(vdcr1,pdcr1)],  markershape = :x, markersize = 5, markercolor = :red, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch}}", subplot=sp)
+    scatter!([(vdcr2,pdcr2)],  markershape = :x, markersize = 5, markercolor = :red, markeralpha = 1, markerstrokecolor = :gold, label = false, subplot=sp)
+    scatter!([(vdcr3,pdcr3)],  markershape = :x, markersize = 5, markercolor = :red, markeralpha = 1, markerstrokecolor = :gold, label = false, subplot=sp)
+    scatter!([(vdcr4,pdcr4)],  markershape = :x, markersize = 5, markercolor = :red, markeralpha = 2, markerstrokecolor = :gold, label = false, subplot=sp)
+    
+    plot!(xlabel=L"{V^{\mathrm{dc}}_e(\mathrm{p.u})}", labelfontsize= 10,subplot=sp)
+    plot!(ylabel=L"{{P^{\mathrm{cv,dc}}_c}^ϵ(\mathrm{p.u})}", labelfontsize= 10, subplot=sp)
+    plot!(title=L"{\mathrm{Converter}\;1}", titlefontsize= 10, subplot=sp)
+
+   # legend
+    scatter!((1:3'), xlim = (4,5), markershape = :rect, markersize = 7, markercolor = :skyblue, markerstrokecolor = :orange, label =L"{\mathrm{base}}", legend=:topleft, framestyle = :none, subplot=8)
+    scatter!((1:3'), xlim = (4,5), markershape = :circle, markersize = 6, markercolor = :orange, markerstrokecolor = :blue, label = L"{\mathrm{final}}", subplot=8)
+    scatter!((1:3'), xlim = (4,5), markershape = :star4, markersize = 4, markercolor = :LightSkyBlue, markeralpha = 1, markerstrokecolor = :MediumPurple, label = L"{\mathrm{contingencies}}", subplot=8)
+    scatter!((1:3'), xlim = (4,5), markershape = :rtriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch}}", subplot=8)
+    scatter!((1:3'), xlim = (4,5), markershape = :ltriangle, markersize = 5, markercolor = :Blue, markeralpha = 1, markerstrokecolor = :gold, label = L"{\mathrm{re-dispatch + OTS}}", subplot=8)
     
 
 # savefig(plt, "droop_plot.png")
+savefig("path/to/directory/filename.tex")
 # ########################################################################################################################################################################################################################################################################
 
 # f1(delta_k) = Pglb + ep_g * log( 1 + ( exp((Pgub-Pglb)/ep_g) / (1 + exp((Pgub - Pgo - alpha_g * delta_k)/ep_g)) ) )
@@ -1164,12 +1379,6 @@ result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_
 # plot(f, 0.8, 1.2)
 # scatter!([(vdc_base,pdc_base)], markershape = :cross, markersize = 10, markercolor = :red)
 # scatter!([(vdc_final,pdc_final)], markershape = :cross, markersize = 10, markercolor = :blue)
-
-
-
-
-
-
 
 
 

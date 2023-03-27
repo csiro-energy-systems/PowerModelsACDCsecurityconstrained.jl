@@ -2,8 +2,8 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
     vio_data = Dict()
     vio_data["genp"] = []
     vio_data["genq"] = []
-    vio_data["branchv"] =[]
-    vio_data["branchdcv"] =[]
+    vio_data["branch"] =[]
+    vio_data["branchdc"] =[]
     vm_vio = 0.0
     for (i,bus) in network["bus"]
         if bus["bus_type"] != 4
@@ -75,16 +75,22 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 #vio_flag = false
                 rating = branch[rate_key]
 
-                if s_fr > rating
+                if s_fr > rating || s_to > rating
+                    if (s_fr - rating) >= (s_to - rating)
                     sm_vio += s_fr - rating
+                    vio_data["branch"] = Dict(i => s_fr - rating)
+                    elseif (s_to - rating) >= (s_fr - rating)
+                        sm_vio += s_to - rating
+                        vio_data["branch"] = Dict(i => s_to - rating)
+                    end
                     #vio_flag = true
-                    push!(vio_data["branchv"], (i, s_fr - rating))
+                    #push!(vio_data["branch"], (i, s_fr - rating))
                 end
-                if s_to > rating
-                    sm_vio += s_to - rating
-                    #vio_flag = true
-                    push!(vio_data["branchv"], (i, s_to - rating))
-                end
+                # if s_to > rating
+                #     #vio_flag = true
+                #     vio_data["branch"] = Dict(i => s_to - rating)
+                #     #push!(vio_data["branch"], (i, s_to - rating))
+                # end
                 #if vio_flag
                 #    info(_LOGGER, "$(i), $(branch["f_bus"]), $(branch["t_bus"]): $(s_fr) / $(s_to) <= $(branch["rate_c"])")
                 #end
@@ -111,16 +117,23 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 #vio_flag = false
                 rating = branchdc[rate_keydc]
 
-                if s_fr > rating
-                    smdc_vio += s_fr - rating
-                    #vio_flag = true
-                    push!(vio_data["branchdcv"], (i, s_fr - rating))
+                if s_fr > rating || s_to > rating
+                    if (s_fr - rating) >= (s_to - rating)
+                        smdc_vio += s_fr - rating
+                        vio_data["branchdc"] = Dict(i => s_fr - rating)
+                        #vio_flag = true
+                        #push!(vio_data["branchdc"], (i, s_fr - rating))
+                    elseif (s_to - rating) >= (s_fr - rating)
+                        smdc_vio += s_to - rating
+                        vio_data["branchdc"] = Dict(i => s_to - rating)
+                    end
                 end
-                if s_to > rating
-                    smdc_vio += s_to - rating
-                    #vio_flag = true
-                    push!(vio_data["branchdcv"], (i, s_to - rating))
-                end
+                # if s_to > rating
+                #     smdc_vio += s_to - rating
+                #     #vio_flag = true
+                #     vio_data["branchdc"] = Dict(i => s_to - rating)
+                #     #push!(vio_data["branchdc"], (i, s_to - rating))
+                # end
                 #if vio_flag
                 #    info(_LOGGER, "$(i), $(branchdc["f_bus"]), $(branchdc["t_bus"]): $(s_fr) / $(s_to) <= $(branchdc["rateC"])")
                 #end
