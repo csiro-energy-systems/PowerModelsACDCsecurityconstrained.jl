@@ -3,7 +3,7 @@ Solves an SCOPF problem for integrated HVAC and HVDC grid by iteratively checkin
 violated contingencies and resolving until a fixed-point is reached.
 
 """
-function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)   
+function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, check_contingency_violation::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)   
     if _IM.ismultinetwork(network)
         Memento.error(_LOGGER, "run_ACDC_scopf_contigency_cuts can only be used on single networks")
     end
@@ -42,15 +42,40 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
     _PM.update_data!(network_base, solution)
     _PM.update_data!(network_active, solution)
+    # update dc part
+    for (i,conv) in network_base["convdc"]
+        conv["P_g"] = -solution["convdc"][i]["pgrid"]
+        conv["Q_g"] = solution["convdc"][i]["qgrid"]
+        if conv["type_dc"] == 2
+            conv["type_dc"] == 2
+        else
+            conv["type_dc"] == 1
+        end
+    end
+    for (i,conv) in network_active["convdc"]
+        conv["P_g"] = -solution["convdc"][i]["pgrid"]
+        conv["Q_g"] = solution["convdc"][i]["qgrid"]
+        if conv["type_dc"] == 2
+            conv["type_dc"] == 2
+        else
+            conv["type_dc"] == 1
+        end
+    end
+    
     for (i, branch) in network_base["branch"]
-        branch["tap"] = solution["branch"][i]["tm"]
-        branch["shift"] = solution["branch"][i]["ta"]
+        if haskey(solution["branch"], i)
+            branch["tap"] = solution["branch"][i]["tm"]
+            branch["shift"] = solution["branch"][i]["ta"]
+        end
     end
     for (i, branch) in network_active["branch"]
-        branch["tap"] = solution["branch"][i]["tm"]
-        branch["shift"] = solution["branch"][i]["ta"]
+        if haskey(solution["branch"], i)
+            branch["tap"] = solution["branch"][i]["tm"]
+            branch["shift"] = solution["branch"][i]["ta"]
+        end
     end
 
+    
 
     result["iterations"] = 0
 
@@ -59,7 +84,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     while contingencies_found > 0
         time_start_iteration = time()
 
-        contingencies = check_contingency_violations(network_base, model_type, optimizer, setting, contingency_limit=iteration)    
+        contingencies = check_contingency_violation(network_base, model_type, optimizer, setting, contingency_limit=iteration)    
         #println(contingencies)
         # result_scopf["$iteration"] = Dict{String,Any}()
         # result_scopf["$iteration"]["sol_c"] = contingencies.results_c                               # post-contingency results 
@@ -153,14 +178,39 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
         _PM.update_data!(network_base, solution)
         _PM.update_data!(network_active, solution)
+
+        # update dc part
+        for (i,conv) in network_base["convdc"]
+            conv["P_g"] = -solution["convdc"][i]["pgrid"]
+            conv["Q_g"] = solution["convdc"][i]["qgrid"]
+            if conv["type_dc"] == 2
+                conv["type_dc"] == 2
+            else
+                conv["type_dc"] == 1
+            end
+        end
+        for (i,conv) in network_active["convdc"]
+            conv["P_g"] = -solution["convdc"][i]["pgrid"]
+            conv["Q_g"] = solution["convdc"][i]["qgrid"]
+            if conv["type_dc"] == 2
+                conv["type_dc"] == 2
+            else
+                conv["type_dc"] == 1
+            end
+        end
         for (i, branch) in network_base["branch"]
-            branch["tap"] = solution["branch"][i]["tm"]
-            branch["shift"] = solution["branch"][i]["ta"]
+            if haskey(solution["branch"], i)
+                branch["tap"] = solution["branch"][i]["tm"]
+                branch["shift"] = solution["branch"][i]["ta"]
+            end
         end
         for (i, branch) in network_active["branch"]
-            branch["tap"] = solution["branch"][i]["tm"]
-            branch["shift"] = solution["branch"][i]["ta"]
+            if haskey(solution["branch"], i)
+                branch["tap"] = solution["branch"][i]["tm"]
+                branch["shift"] = solution["branch"][i]["ta"]
+            end
         end
+        
 
         time_iteration = time() - time_start_iteration
         time_remaining = time_limit - (time() - time_start)
@@ -168,8 +218,8 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             _PMSC.warn(_LOGGER, "insufficent time for next iteration, time remaining $(time_remaining), estimated iteration time $(time_iteration)")
             break
         end
-        result_scopf["itr_time"] = time_iteration
-        result_scopf["vio"] = contingencies.results_c
+        # result_scopf["itr_time"] = time_iteration
+        # result_scopf["vio"] = contingencies.results_c
         iteration += 1
     end
 

@@ -24,6 +24,22 @@ mpc.branch = [
         1   2   0.02    0.06    0.06    100   100   100     0       0       0 -60 60;
 ];
 
+%column_names% 				prob    branch_id1 	 branch_id2 	branch_id3 		dcbranch_id1 	dcbranch_id2 		dcbranch_id3 	gen_id1 	gen_id2     gen_id3    dcconv_id1    dcconv_id2    dcconv_id3
+mpc.contingencies = [
+
+                    0.005       1 			0 				 0   			0   			0 					0   			0 			0 			0   		0 				0 			0;
+                   	0.005       0 			0 				 0   			0 				0 					0   			1 			0 			0   		0 				0 			0;
+               			0.005       0 			0 				 0   			0 				0 					0   			2 			0 			0   		0 				0 			0;
+              			0.005       0 			0 				 0   			1 				0 					0   			0 			0 			0   		0 				0 			0;
+                    0.005       0 			0 				 0   			2   			0 					0   			0 			0 			0   		0 				0 			0;
+                   	0.005       0 			0 				 0   			3 				0 					0   			0 			0 			0   		0 				0 			0;
+               			0.005       0 			0 				 0   			4 				0 					0   			0 			0 			0   		0 				0 			0;
+              			0.005       0 			0 				 0   			0 				0 					0   			0 			0 			0   		1 				0 			0;
+                    0.005       0 			0 				 0   			0 				0 					0   			0 			0 			0   		2 				0 			0;
+
+                                     
+ ];
+
 
 %% dc grid topology
 %colunm_names% dcpoles

@@ -2,7 +2,7 @@ module PowerModelsACDCsecurityconstrained
 
     import JuMP
     import PowerModels
-    import StochasticPowerModels
+    # import StochasticPowerModels
     import PowerModelsACDC
     import PowerModelsSecurityConstrained
     import Memento
@@ -16,7 +16,7 @@ module PowerModelsACDCsecurityconstrained
     const _PMSC = PowerModelsSecurityConstrained
     const _PMACDC = PowerModelsACDC
     const _IM = InfrastructureModels
-    const _SPM = StochasticPowerModels
+    # const _SPM = StochasticPowerModels
     const _LA = LinearAlgebra
     const _PCE = PolyChaos
     const _KDE = KernelDensity
@@ -55,8 +55,8 @@ module PowerModelsACDCsecurityconstrained
     #include("core/ACDC_R_pf.jl")
     #include("core/ACDC_R_cv.jl")
     
-    include("core/ACDC_opf_stochastic.jl")   ## Stochastic
-    include("core/variable_stochastic.jl")
+    # include("core/ACDC_opf_stochastic.jl")   ## Stochastic
+    # include("core/variable_stochastic.jl")
 
     include("core/acdcopfACR.jl")       #ACR formulation
 
@@ -70,5 +70,6 @@ module PowerModelsACDCsecurityconstrained
 
 
     include("core/re_dispatch_algo.jl") 
+    include("core/contingency_filter_SI.jl")
 
 end # module

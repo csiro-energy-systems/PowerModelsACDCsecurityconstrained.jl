@@ -6,10 +6,10 @@ simulation. It returns a list of contingencies where a violation is found.
 """
 
 function check_contingency_violations(network, model_type, optimizer, setting;
-    gen_contingency_limit=15, branch_contingency_limit=15, branchdc_contingency_limit=15, convdc_contingency_limit=15, contingency_limit=typemax(Int64),
+    gen_contingency_limit=1000, branch_contingency_limit=1000, branchdc_contingency_limit=1000, convdc_contingency_limit=1000, contingency_limit=typemax(Int64),
     gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), convdc_eval_limit=typemax(Int64), sm_threshold=0.01, smdc_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
 
-    results_c = Dict{String,Any}()
+    ### results_c = Dict{String,Any}()
 
     if _IM.ismultinetwork(network)
         error(_LOGGER, "the branch flow cut generator can only be used on single networks")
@@ -43,8 +43,8 @@ function check_contingency_violations(network, model_type, optimizer, setting;
     convdc_contingencies = calc_convdc_contingency_subset(network_lal, convdc_eval_limit=convdc_eval_limit)
 
     ######################################################################################################################################################
-    active_conts_by_branch = []
-    active_conts_by_branchdc = []
+    active_conts_by_branch = Dict()
+    active_conts_by_branchdc = Dict()
     gen_cuts = []
     gen_cut_vio = 0.0
     for (i,cont) in enumerate(gen_contingencies)
@@ -92,39 +92,41 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         try
             solution =  _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
-            results_c["c$(cont.label)"] = solution  
+            ### results_c["c$(cont.label)"] = solution  
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
             continue
         end
 
         vio = calc_violations(network_lal, network_lal)            # Update_GM
-        results_c["vio_c$(cont.label)"] = vio
+        ### results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
         if vio.sm > sm_threshold || vio.smdc > smdc_threshold
             if !isempty(vio.vio_data["branch"]) && isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
-                active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                #active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
             end
             if !isempty(vio.vio_data["branchdc"]) && isempty(vio.vio_data["branch"])
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                #active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
             end
             if !isempty(vio.vio_data["branch"]) && !isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_keys[1]]
-                    active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_dkeys[1]]
+                    push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
                 else
-                    active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
                 end
             end
-            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")           # Update
+            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $([p for p in pairs(vio) if p[1]!=:vio_data])")           # Update
             push!(gen_cuts, cont)
             gen_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc + vio.cmac + vio.cmdc
         else
@@ -157,14 +159,14 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         try
             solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
-            results_c["c$(cont.label)"] = solution
+            ### results_c["c$(cont.label)"] = solution
         catch exception
            _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
            continue
         end
         
         vio = calc_violations(network_lal, network_lal)          # Update_GM 
-        results_c["vio_c$(cont.label)"] = vio
+        ### results_c["vio_c$(cont.label)"] = vio
     
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
@@ -172,25 +174,29 @@ function check_contingency_violations(network, model_type, optimizer, setting;
             if !isempty(vio.vio_data["branch"]) && isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
-                active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
             end
             if !isempty(vio.vio_data["branchdc"]) && isempty(vio.vio_data["branch"])
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
             end
             if !isempty(vio.vio_data["branch"]) && !isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_keys[1]]
-                    active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_dkeys[1]]
+                    # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                    push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
                 else
-                    active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
                 end
             end
-            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")                              # Update_GM
+            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $([p for p in pairs(vio) if p[1]!=:vio_data])")                              # Update_GM
             push!(branch_cuts, cont)
             branch_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc + vio.cmac + vio.cmdc
         else
@@ -223,39 +229,43 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         try
             solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
-            results_c["c$(cont.label)"] = solution
+            ### results_c["c$(cont.label)"] = solution
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
             continue
         end
 
         vio = calc_violations(network_lal, network_lal)          # Update_GM 
-        results_c["vio_c$(cont.label)"] = vio
+        ### results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
         if vio.smdc > sm_threshold || vio.smdc > sm_threshold
             if !isempty(vio.vio_data["branch"]) && isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
-                active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
             end
             if !isempty(vio.vio_data["branchdc"]) && isempty(vio.vio_data["branch"])
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
             end
             if !isempty(vio.vio_data["branch"]) && !isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_keys[1]]
-                    active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_dkeys[1]]
+                    # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                    push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
                 else
-                    active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
                 end
             end
-            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
+            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $([p for p in pairs(vio) if p[1]!=:vio_data])")            # Update_GM
             push!(branchdc_cuts, cont)
             branchdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc + vio.cmac + vio.cmdc
         else
@@ -286,39 +296,43 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         try
             solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
-            results_c["c$(cont.label)"] = solution
+            ### results_c["c$(cont.label)"] = solution
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")     # Update_GM
             continue
         end
 
         vio = calc_violations(network_lal, network_lal)          # Update_GM 
-        results_c["vio_c$(cont.label)"] = vio
+        ### results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold || vio.cmac > sm_threshold || vio.cmdc > sm_threshold
-        if vio.sm > sm_threshold || vio.smdc > sm_threshold || vio.cmac > sm_threshold || vio.cmdc > sm_threshold
+        if vio.sm > sm_threshold || vio.smdc > sm_threshold 
             if !isempty(vio.vio_data["branch"]) && isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
-                active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
             end
             if !isempty(vio.vio_data["branchdc"]) && isempty(vio.vio_data["branch"])
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
             end
             if !isempty(vio.vio_data["branch"]) && !isempty(vio.vio_data["branchdc"])
                 vio.vio_data["branch"] = sort(vio.vio_data["branch"], rev=true, byvalue=true) 
                 vio.vio_data["branchdc"] = sort(vio.vio_data["branchdc"], rev=true, byvalue=true) 
                 const_akeys = collect(keys(vio.vio_data["branch"]))
                 const_dkeys = collect(keys(vio.vio_data["branchdc"]))
-                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_keys[1]]
-                    active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                if vio.vio_data["branch"][const_akeys[1]] >= vio.vio_data["branchdc"][const_dkeys[1]]
+                    # active_conts_by_branch = Dict(cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
+                    push!(active_conts_by_branch, cont.label => (parse(Int64, const_akeys[1]), vio.vio_data["branch"][const_akeys[1]]))
                 else
-                    active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    # active_conts_by_branchdc = Dict(cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
+                    push!(active_conts_by_branchdc, cont.label => (parse(Int64, const_dkeys[1]), vio.vio_data["branchdc"][const_dkeys[1]]))
                 end
             end
-            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
+            _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $([p for p in pairs(vio) if p[1]!=:vio_data])")            # Update_GM
             push!(convdc_cuts, cont)
             convdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc + vio.cmac + vio.cmdc
         else
@@ -328,12 +342,130 @@ function check_contingency_violations(network, model_type, optimizer, setting;
         cont_convdc["status"] = 1
     end
     ################### filtering non-dominated contingencies ###########################
-    # if !isempty(gen_cuts)
-    #     for cont in gen_cuts
-    #         for i in active_conts_by_branch
-    #             if active_conts_by_branch[]
-                
+    if !isempty(gen_cuts)
+        for contn in gen_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
+    if !isempty(branch_cuts)
+        for contn in branch_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    if !isempty(branchdc_cuts)
+        for contn in branchdc_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if !isempty(convdc_cuts)
+        for contn in convdc_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !==i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if !isempty(gen_cuts)
+        for contn in gen_cuts
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                deleteat!(gen_cuts, findfirst(isequal(contn), gen_cuts))
+                _PMSC.info(_LOGGER, "gen contingency $(contn.label) removed")
+            end
+        end
+    end
+    if !isempty(branch_cuts)
+        for contn in branch_cuts
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                deleteat!(branch_cuts, findfirst(isequal(contn), branch_cuts))
+                _PMSC.info(_LOGGER, "branch contingency $(contn.label) removed")
+            end
+        end
+    end
+    if !isempty(branchdc_cuts)
+        for contn in branchdc_cuts
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                deleteat!(branchdc_cuts, findfirst(isequal(contn), branchdc_cuts))
+                _PMSC.info(_LOGGER, "branchdc contingency $(contn.label) removed")
+            end
+        end
+    end
+    if !isempty(convdc_cuts)
+        for contn in convdc_cuts
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                deleteat!(convdc_cuts, findfirst(isequal(contn), convdc_cuts))
+                _PMSC.info(_LOGGER, "convdc contingency $(contn.label) removed")
+            end
+        end
+    end
 
 
 
@@ -350,7 +482,7 @@ function check_contingency_violations(network, model_type, optimizer, setting;
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, convdc_cut_vio, results_c)
+    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, convdc_cut_vio) # results_c
 end
 
 

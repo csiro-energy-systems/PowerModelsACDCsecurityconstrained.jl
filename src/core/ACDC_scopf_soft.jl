@@ -15,7 +15,7 @@ end
 
 
 # enables support for v[1], required for objective_variable_pg_cost when pg is an expression
-Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
+ Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
 function build_scopf_soft(pm::_PM.AbstractPowerModel)

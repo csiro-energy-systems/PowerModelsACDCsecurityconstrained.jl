@@ -1,9 +1,9 @@
 function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
     vio_data = Dict()
-    vio_data["genp"] = []
-    vio_data["genq"] = []
-    vio_data["branch"] =[]
-    vio_data["branchdc"] =[]
+    vio_data["genp"] = Dict()
+    vio_data["genq"] = Dict()
+    vio_data["branch"] = Dict()
+    vio_data["branchdc"] = Dict()
     vm_vio = 0.0
     for (i,bus) in network["bus"]
         if bus["bus_type"] != 4
@@ -73,15 +73,17 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
 
                 # note true model is rate_c
                 #vio_flag = false
-                rating = branch[rate_key]
+                rating = branch[rate_key]           #*1.1
 
                 if s_fr > rating || s_to > rating
                     if (s_fr - rating) >= (s_to - rating)
                     sm_vio += s_fr - rating
-                    vio_data["branch"] = Dict(i => s_fr - rating)
+                    #vio_data["branch"] = Dict(i => s_fr - rating)
+                    push!(vio_data["branch"], i => s_fr - rating)
                     elseif (s_to - rating) >= (s_fr - rating)
                         sm_vio += s_to - rating
-                        vio_data["branch"] = Dict(i => s_to - rating)
+                        # vio_data["branch"] = Dict(i => s_to - rating)
+                        push!(vio_data["branch"], i => s_to - rating)
                     end
                     #vio_flag = true
                     #push!(vio_data["branch"], (i, s_fr - rating))
@@ -120,12 +122,13 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 if s_fr > rating || s_to > rating
                     if (s_fr - rating) >= (s_to - rating)
                         smdc_vio += s_fr - rating
-                        vio_data["branchdc"] = Dict(i => s_fr - rating)
+                        # vio_data["branchdc"] = Dict(i => s_fr - rating)
+                        push!(vio_data["branchdc"], i => s_fr - rating)
                         #vio_flag = true
-                        #push!(vio_data["branchdc"], (i, s_fr - rating))
                     elseif (s_to - rating) >= (s_fr - rating)
                         smdc_vio += s_to - rating
-                        vio_data["branchdc"] = Dict(i => s_to - rating)
+                        #vio_data["branchdc"] = Dict(i => s_to - rating)
+                        push!(vio_data["branchdc"], i => s_to - rating)
                     end
                 end
                 # if s_to > rating

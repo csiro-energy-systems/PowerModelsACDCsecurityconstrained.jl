@@ -80,11 +80,11 @@ function variable_power_balance_ac_positive_violation(pm::_PM.AbstractPowerModel
 end   
 
 function variable_power_balance_ac_positive_violation_real(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    pb_ac_pos_vio = _PM.var(pm, nw)[:pb_ac_pos_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_pb_ac_pos_vio",
+    pb_ac_pos_vio = _PM.var(pm, nw)[:pb_ac_pos_vio] = JuMP.@variable(pm.model, [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_pb_ac_pos_vio",
     )
 
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))
+        for i in _PM.ids(pm, nw, :bus)
             JuMP.set_lower_bound(pb_ac_pos_vio[i], 0.0)
             JuMP.set_upper_bound(pb_ac_pos_vio[i], 1e1)
         end
@@ -94,11 +94,11 @@ function variable_power_balance_ac_positive_violation_real(pm::_PM.AbstractPower
 end 
 
 function variable_power_balance_ac_positive_violation_imag(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    qb_ac_pos_vio = _PM.var(pm, nw)[:qb_ac_pos_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_qb_ac_pos_vio",
+    qb_ac_pos_vio = _PM.var(pm, nw)[:qb_ac_pos_vio] = JuMP.@variable(pm.model, [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_qb_ac_pos_vio",
     )
 
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))
+        for i in _PM.ids(pm, nw, :bus)
             JuMP.set_lower_bound(qb_ac_pos_vio[i], 0.0)
             JuMP.set_upper_bound(qb_ac_pos_vio[i], 1e1)
         end
@@ -113,11 +113,11 @@ function variable_power_balance_ac_negative_violation(pm::_PM.AbstractPowerModel
 end   
 
 function variable_power_balance_ac_negative_violation_real(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    pb_ac_neg_vio = _PM.var(pm, nw)[:pb_ac_neg_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_pb_ac_neg_vio",
+    pb_ac_neg_vio = _PM.var(pm, nw)[:pb_ac_neg_vio] = JuMP.@variable(pm.model, [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_pb_ac_neg_vio",
     )
 
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))
+        for i in _PM.ids(pm, nw, :bus)
             JuMP.set_lower_bound(pb_ac_neg_vio[i], 0.0)
             JuMP.set_upper_bound(pb_ac_neg_vio[i], 1e1)
         end
@@ -127,11 +127,11 @@ function variable_power_balance_ac_negative_violation_real(pm::_PM.AbstractPower
 end 
 
 function variable_power_balance_ac_negative_violation_imag(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    qb_ac_neg_vio = _PM.var(pm, nw)[:qb_ac_neg_vio] = JuMP.@variable(pm.model, [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_qb_ac_neg_vio",
+    qb_ac_neg_vio = _PM.var(pm, nw)[:qb_ac_neg_vio] = JuMP.@variable(pm.model, [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_qb_ac_neg_vio",
     )
 
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))
+        for i in _PM.ids(pm, nw, :bus)
             JuMP.set_lower_bound(qb_ac_neg_vio[i], 0.0)
             JuMP.set_upper_bound(qb_ac_neg_vio[i], 1e1)
         end
@@ -144,11 +144,11 @@ end
 
 function variable_power_balance_dc_positive_violation(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     pb_dc_pos_vio = _PM.var(pm, nw)[:pb_dc_pos_vio] = JuMP.@variable(pm.model,
-        [i in 1:length(_PM.ref(pm, nw, :busdc))], base_name="$(nw)_pb_dc_pos_vio",
+        [i in _PM.ids(pm, nw, :busdc)], base_name="$(nw)_pb_dc_pos_vio",
     )
 
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :busdc))
+        for i in _PM.ids(pm, nw, :busdc)
             JuMP.set_lower_bound(pb_dc_pos_vio[i], 0.0)
             JuMP.set_upper_bound(pb_dc_pos_vio[i], 1e1)
         end
@@ -179,11 +179,11 @@ function variable_c1_voltage_response(pm::_PM.AbstractPowerModel; kwargs...)
 end 
 function variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     vg_pos = _PM.var(pm, nw)[:vg_pos] = JuMP.@variable(pm.model,
-        [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_vg_pos",
+        [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_pos",
     )             
     
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))        
+        for i in _PM.ids(pm, nw, :bus)        
             JuMP.set_lower_bound(vg_pos[i], 0.0)   
             #JuMP.set_upper_bound(vg_pos[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
         end
@@ -193,11 +193,11 @@ function variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; nw::I
 end
 function variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
     vg_neg = _PM.var(pm, nw)[:vg_neg] = JuMP.@variable(pm.model,
-        [i in 1:length(_PM.ref(pm, nw, :bus))], base_name="$(nw)_vg_neg",
+        [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_neg",
     )
     
     if bounded
-        for i in 1:length(_PM.ref(pm, nw, :bus))
+        for i in _PM.ids(pm, nw, :bus)
             JuMP.set_lower_bound(vg_neg[i], 0.0)   
             #JuMP.set_upper_bound(vg_neg[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
         end

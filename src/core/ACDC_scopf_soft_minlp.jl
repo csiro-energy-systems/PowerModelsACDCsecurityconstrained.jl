@@ -286,11 +286,11 @@ function objective_min_fuel_cost_scopf_soft_polynomial_linquad(pm::_PM.AbstractP
             sum( 5e5*_PM.var(pm, n, :bf_vio_to, i) for i in _PM.ids(pm, n, :branch) ) + 
             sum( 5e5*_PM.var(pm, n, :bdcf_vio_fr, i) for i in _PM.ids(pm, n, :branchdc) ) +
             sum( 5e5*_PM.var(pm, n, :bdcf_vio_to, i) for i in _PM.ids(pm, n, :branchdc) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :busdc)) )
+            sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus))  +
+            sum( 5e5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus))  +
+            sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus))  +
+            sum( 5e5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus))  +
+            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in _PM.ids(pm, n, :busdc) )
         for (n, nw_ref) in _PM.nws(pm))
     )
 end
