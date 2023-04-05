@@ -7,7 +7,7 @@ simulation. It returns a list of contingencies where a violation is found.
 
 function check_contingency_violations_SI(network, model_type, optimizer, setting;
     gen_contingency_limit=1000, branch_contingency_limit=1000, branchdc_contingency_limit=1000, convdc_contingency_limit=1000, contingency_limit=typemax(Int64),
-    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), convdc_eval_limit=typemax(Int64), sm_threshold=0.1, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
+    gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), convdc_eval_limit=typemax(Int64), sm_threshold=0.01, pg_threshold=0.01, qg_threshold=0.01,vm_threshold=0.01 )     # Update_GM
 
     ### results_c = Dict{String,Any}()
 

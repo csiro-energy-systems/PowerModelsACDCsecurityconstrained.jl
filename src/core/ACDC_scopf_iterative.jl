@@ -51,6 +51,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         else
             conv["type_dc"] == 1
         end
+        conv["Pdcset"] = solution["convdc"][i]["pdc"]
     end
     for (i,conv) in network_active["convdc"]
         conv["P_g"] = -solution["convdc"][i]["pgrid"]
@@ -60,6 +61,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
         else
             conv["type_dc"] == 1
         end
+        conv["Pdcset"] = solution["convdc"][i]["pdc"]
     end
     
     for (i, branch) in network_base["branch"]
@@ -188,6 +190,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             else
                 conv["type_dc"] == 1
             end
+            conv["Pdcset"] = solution["convdc"][i]["pdc"]
         end
         for (i,conv) in network_active["convdc"]
             conv["P_g"] = -solution["convdc"][i]["pgrid"]
@@ -197,6 +200,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             else
                 conv["type_dc"] == 1
             end
+            conv["Pdcset"] = solution["convdc"][i]["pdc"]
         end
         for (i, branch) in network_base["branch"]
             if haskey(solution["branch"], i)

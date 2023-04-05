@@ -469,3 +469,25 @@ report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_d, _PM.ids
 report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_e, _PM.ids(pm, nw, :convdc), xd_e)
 
 end
+
+# function variable_shunt_admittance_imaginary(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+#     bs_var = _PM.var(pm, nw)[:bs_var] = JuMP.@variable(pm.model,
+#         [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_bs_var",
+#         start = _PM.comp_start_value(_PM.ref(pm, nw, :bus, i), "bs_var_start")
+#     )
+
+#     # if bounded
+#     #     for i in _PM.ids(pm, nw, :bus)
+#     #         if haskey(pm.ref[:it][:pm][:nw][nw][:shunt], i) 
+#     #             shunt = _PM.ref(pm, nw, :shunt, i)
+#     #             JuMP.set_lower_bound(bs_var[i], shunt["bmin"])
+#     #             JuMP.set_upper_bound(bs_var[i], shunt["bmax"])
+#     #         else
+#     #             JuMP.set_lower_bound(bs_var[i], 0)
+#     #             JuMP.set_upper_bound(bs_var[i], 0)
+#     #         end
+#     #     end
+#     # end
+
+#     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :bs_var, _PM.ids(pm, nw, :bus), bs_var)
+# end

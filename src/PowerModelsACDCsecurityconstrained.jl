@@ -18,8 +18,8 @@ module PowerModelsACDCsecurityconstrained
     const _IM = InfrastructureModels
     # const _SPM = StochasticPowerModels
     const _LA = LinearAlgebra
-    const _PCE = PolyChaos
-    const _KDE = KernelDensity
+    # const _PCE = PolyChaos
+    # const _KDE = KernelDensity
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)

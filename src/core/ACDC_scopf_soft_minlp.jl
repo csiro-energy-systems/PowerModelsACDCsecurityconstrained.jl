@@ -238,11 +238,11 @@ function objective_min_fuel_cost_scopf_soft_pwl(pm::_PM.AbstractPowerModel; kwar
             sum( 5e5*_PM.var(pm, n, :bf_vio_to, i) for i in _PM.ids(pm, n, :branch) ) + 
             sum( 5e5*_PM.var(pm, n, :bdcf_vio_fr, i) for i in _PM.ids(pm, n, :branchdc) ) +
             sum( 5e5*_PM.var(pm, n, :bdcf_vio_to, i) for i in _PM.ids(pm, n, :branchdc) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :busdc)) ) +
+            sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+            sum( 5e5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+            sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+            sum( 5e5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in _PM.ids(pm, n, :busdc) ) +
             sum( 5e5*_PM.var(pm, n, :i_conv_vio, i) for i in _PM.ids(pm, n, :convdc) ) 
             for (n, nw_ref) in _PM.nws(pm) )
     )
@@ -290,7 +290,8 @@ function objective_min_fuel_cost_scopf_soft_polynomial_linquad(pm::_PM.AbstractP
             sum( 5e5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus))  +
             sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus))  +
             sum( 5e5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus))  +
-            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in _PM.ids(pm, n, :busdc) )
+            sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in _PM.ids(pm, n, :busdc) ) +
+            sum( 5e5*_PM.var(pm, n, :i_conv_vio, i) for i in _PM.ids(pm, n, :convdc) ) 
         for (n, nw_ref) in _PM.nws(pm))
     )
 end
@@ -328,6 +329,7 @@ function objective_min_fuel_cost_scopf_soft_polynomial_nl(pm::_PM.AbstractPowerM
     qb_ac_pos_vio = _PM.var(pm, :qb_ac_pos_vio) 
     qb_ac_neg_vio = _PM.var(pm, :qb_ac_neg_vio) 
     pb_dc_pos_vio = _PM.var(pm, :pb_dc_pos_vio) 
+    i_conv_vio = _PM.var(pm, :i_conv_vio)
 
     return JuMP.@NLobjective(pm.model, Min,
         sum(
@@ -341,7 +343,8 @@ function objective_min_fuel_cost_scopf_soft_polynomial_nl(pm::_PM.AbstractPowerM
                 sum( 5e5*pb_ac_neg_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :bus)) ) +
                 sum( 5e5*qb_ac_pos_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :bus)) ) +
                 sum( 5e5*qb_ac_neg_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-                sum( 5e5*pb_dc_pos_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :busdc)) )
+                sum( 5e5*pb_dc_pos_vio[(n,i)] for i in 1:length(_PM.ref(pm, n, :busdc)) ) +
+                sum( 5e5*i_conv_vio[(n,i)] for i in _PM.ids(pm, n, :convdc) ) 
         for (n, nw_ref) in _PM.nws(pm))
     )
 end

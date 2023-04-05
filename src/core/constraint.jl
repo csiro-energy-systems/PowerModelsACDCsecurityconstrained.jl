@@ -1,5 +1,5 @@
 ############## acp.jl ###################################################################################################################################################################################
-function constraint_power_balance_ac_soft(pm::_PM.AbstractACPModel, n::Int,  i::Int, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts, pd, qd, gs, bs)
+function constraint_power_balance_ac_shunt_dispatch_soft(pm::_PM.AbstractACPModel, n::Int,i::Int, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts, bus_shunts_var, pd, qd, gs, bs)
     vm = _PM.var(pm, n,  :vm, i)
     p = _PM.var(pm, n,  :p)
     q = _PM.var(pm, n,  :q)
@@ -7,14 +7,18 @@ function constraint_power_balance_ac_soft(pm::_PM.AbstractACPModel, n::Int,  i::
     qg = _PM.var(pm, n,  :qg)
     pconv_grid_ac = _PM.var(pm, n,  :pconv_tf_fr)
     qconv_grid_ac = _PM.var(pm, n,  :qconv_tf_fr)
+
     pb_ac_pos_vio = _PM.var(pm, n, :pb_ac_pos_vio, i)
     qb_ac_pos_vio = _PM.var(pm, n, :qb_ac_pos_vio, i)
     pb_ac_neg_vio = _PM.var(pm, n, :pb_ac_neg_vio, i)
     qb_ac_neg_vio = _PM.var(pm, n, :qb_ac_neg_vio, i)
 
+    bs_var = get(_PM.var(pm, n), :bs, Dict()); #_PM._check_var_keys(bs, bus_shunts_var, "reactive power", "shunt")
+
     JuMP.@NLconstraint(pm.model, pb_ac_pos_vio - pb_ac_neg_vio  + sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens)   - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
-    JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2)
+    JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2 + sum(bs_var[s] for s in bus_shunts_var)*vm^2)
 end
+    
 
 
 ############## dcp.jl ###################################################################################################################################################################################
@@ -318,7 +322,7 @@ function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractACPModel, 
     # qglb = _PM.var(pm, n_2, :qglb, gen_id)
     qgub = JuMP.upper_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
     qglb = JuMP.lower_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
-    ep = 0.01
+    ep = 0.001
     
     JuMP.set_upper_bound(qg, qgub)
     JuMP.set_lower_bound(qg, qglb)
