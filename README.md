@@ -5,7 +5,7 @@ PowerModelsACDCsecurityconstrained.jl is a Julia/JuMP/PowerModels package for se
 Building upon the PowerModels architecture, the code is engineered to decouple security-constrained optimal power flow problem from the power network formulations for AC-DC grids.
 
 **Installation**
-The latest stable release of PowerModelACDC can be installed using the Julia package manager with
+
 
 ```julia
 Pkg.add("PowerModelsACDCsecurityconstrained")
