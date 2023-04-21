@@ -39,8 +39,8 @@ Additional Features:
 
 ## Contributors
 
-Ghulam Mohy ud din (CSIRO)
-Rahmat Heidarihaei (CSIRO)
-Frederik Geth (GridQube)
-Hakan Ergun (KU Leuven / EnergyVille)
+* Ghulam Mohy ud din (CSIRO)
+* Rahmat Heidarihaei (CSIRO)
+* Frederik Geth (GridQube)
+* Hakan Ergun (KU Leuven / EnergyVille)
 
