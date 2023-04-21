@@ -122,7 +122,7 @@ function run_c1_scopf_check(file, model_constructor, solver; kwargs...)
 end
 
 # enables support for v[1], required for objective_variable_pg_cost when pg is an expression
-Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
+# Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
 function build_c1_scopf_check(pm::_PM.AbstractPowerModel)

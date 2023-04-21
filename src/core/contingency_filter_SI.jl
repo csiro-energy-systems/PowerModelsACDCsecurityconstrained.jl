@@ -43,6 +43,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
     convdc_contingencies = calc_convdc_contingency_subset(network_lal, convdc_eval_limit=convdc_eval_limit)
 
     ######################################################################################################################################################
+    total_cuts_pre_filter = []
     gen_cuts = []
     gen_cut_vio = 0.0
     for (i,cont) in enumerate(gen_contingencies)
@@ -252,11 +253,11 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
     #         load["pd"] -= p_delta
     #     end
     # end
-
+    total_cuts_pre_filter = 0
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, convdc_cut_vio) # results_c
+    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, gen_cut_vio, branch_cut_vio, branchdc_cut_vio, convdc_cut_vio, total_cuts_pre_filter) # results_c
 end
 
 

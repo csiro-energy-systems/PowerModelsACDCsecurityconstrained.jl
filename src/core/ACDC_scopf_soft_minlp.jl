@@ -10,12 +10,12 @@ violated contingencies in integrated HVAC and HVDC grid.
 
 function run_scopf_soft_minlp(data, model_constructor, solver; kwargs...)
     # _PMACDC.process_additional_data!(data)
-    return _PM.run_model(data, model_constructor, solver, build_scopf_soft_minlp; ref_extensions = [_PM.ref_add_on_off_va_bounds!, _PMACDC.add_ref_dcgrid!], multinetwork=true, kwargs...)
+    return _PM.run_model(data, model_constructor, solver, build_scopf_soft_minlp; ref_extensions = [_PM.ref_add_on_off_va_bounds!, _PMACDC.add_ref_dcgrid!, _PMSC.ref_c1!], multinetwork=true, kwargs...)
 end
 
 
 # enables support for v[1], required for objective_variable_pg_cost when pg is an expression
-Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
+# Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
 function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
@@ -23,7 +23,9 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
     _PM.variable_bus_voltage(pm, nw=0)
     _PM.variable_gen_power(pm, nw=0)
     _PM.variable_branch_power(pm, nw=0)
-    _PM.variable_branch_transform(pm, nw=0)    
+    _PM.variable_branch_transform(pm, nw=0)
+    _PMSC.variable_c1_shunt_admittance_imaginary(pm, nw=0)
+
     _PMACDC.variable_active_dcbranch_flow(pm, nw=0)       
     _PMACDC.variable_dcbranch_current(pm, nw=0)           
     variable_dc_converter_n(pm, nw=0)               
@@ -49,7 +51,7 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
     end
 
     for i in _PM.ids(pm, nw=0, :bus)                        
-        constraint_power_balance_ac_soft(pm, i, nw=0)
+        constraint_power_balance_ac_shunt_dispatch_soft(pm, i, nw=0)
     end
 
     for i in _PM.ids(pm, nw=0, :branch)                     
@@ -93,11 +95,13 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
         _PM.variable_gen_power(pm, nw=nw, bounded=true)
         _PM.variable_branch_power(pm, nw=nw)
         _PM.variable_branch_transform(pm, nw=nw)
+        _PMSC.variable_c1_shunt_admittance_imaginary(pm, nw=nw)
+
         _PMACDC.variable_active_dcbranch_flow(pm, nw=nw, bounded=false)       
         _PMACDC.variable_dcbranch_current(pm, nw=nw)           
         variable_dc_converter_n(pm, nw=nw)               
         _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)
-        variable_c1_voltage_response(pm, nw=nw)   
+        #variable_c1_voltage_response(pm, nw=nw)   
 
         variable_branch_thermal_limit_violation(pm, nw=nw)         
         variable_branchdc_thermal_limit_violation(pm, nw=nw)         
@@ -115,7 +119,7 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
         _PMACDC.constraint_voltage_dc(pm, nw=nw)
 
         _PMSC.variable_c1_response_delta(pm, nw=nw)
-        variable_conv_response_delta(pm, nw=nw)
+        #variable_conv_response_delta(pm, nw=nw)
 
         _PM.constraint_model_voltage(pm, nw=nw)
 
@@ -125,7 +129,7 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
 
         gen_buses = _PM.ref(pm, nw=nw, :gen_buses)
         for i in _PM.ids(pm, nw=nw, :bus)                 
-            constraint_power_balance_ac_soft(pm, i, nw=nw)       
+            constraint_power_balance_ac_shunt_dispatch_soft(pm, i, nw=nw)       
 
             # if a bus has active generators, fix the voltage magnitude to the base case
             if i in gen_buses

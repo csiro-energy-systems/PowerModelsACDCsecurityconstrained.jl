@@ -173,49 +173,49 @@ function variable_converter_current_violation(pm::_PM.AbstractPowerModel; nw::In
 end 
 
 
-function variable_c1_voltage_response(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; kwargs...)
-    variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; kwargs...) 
-end 
-function variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    vg_pos = _PM.var(pm, nw)[:vg_pos] = JuMP.@variable(pm.model,
-        [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_pos",
-    )             
+# function variable_c1_voltage_response(pm::_PM.AbstractPowerModel; kwargs...)
+#     variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; kwargs...)
+#     variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; kwargs...) 
+# end 
+# function variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+#     vg_pos = _PM.var(pm, nw)[:vg_pos] = JuMP.@variable(pm.model,
+#         [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_pos",
+#     )             
     
-    if bounded
-        for i in _PM.ids(pm, nw, :bus)        
-            JuMP.set_lower_bound(vg_pos[i], 0.0)   
-            #JuMP.set_upper_bound(vg_pos[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
-        end
-    end
+#     if bounded
+#         for i in _PM.ids(pm, nw, :bus)        
+#             JuMP.set_lower_bound(vg_pos[i], 0.0)   
+#             #JuMP.set_upper_bound(vg_pos[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
+#         end
+#     end
 
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_pos, _PM.ids(pm, nw, :bus), vg_pos)
-end
-function variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
-    vg_neg = _PM.var(pm, nw)[:vg_neg] = JuMP.@variable(pm.model,
-        [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_neg",
-    )
+#     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_pos, _PM.ids(pm, nw, :bus), vg_pos)
+# end
+# function variable_c1_voltage_response_negative(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+#     vg_neg = _PM.var(pm, nw)[:vg_neg] = JuMP.@variable(pm.model,
+#         [i in _PM.ids(pm, nw, :bus)], base_name="$(nw)_vg_neg",
+#     )
     
-    if bounded
-        for i in _PM.ids(pm, nw, :bus)
-            JuMP.set_lower_bound(vg_neg[i], 0.0)   
-            #JuMP.set_upper_bound(vg_neg[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
-        end
-    end
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_neg, _PM.ids(pm, nw, :bus), vg_neg)
-end 
+#     if bounded
+#         for i in _PM.ids(pm, nw, :bus)
+#             JuMP.set_lower_bound(vg_neg[i], 0.0)   
+#             #JuMP.set_upper_bound(vg_neg[i], JuMP.upper_bound(_PM.var(pm, nw, :vm, i)) - JuMP.lower_bound(_PM.var(pm, nw, :vm, i)))
+#         end
+#     end
+#     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :vg_neg, _PM.ids(pm, nw, :bus), vg_neg)
+# end 
 
-"variable controling a linear converter responce "
-function variable_conv_response_delta(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
-    delta_conv = _PM.var(pm, nw)[:delta_conv] = JuMP.@variable(pm.model,
-        base_name="$(nw)_delta_conv",
-        start = 0.0
-    )
+# "variable controling a linear converter responce "
+# function variable_conv_response_delta(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
+#     delta_conv = _PM.var(pm, nw)[:delta_conv] = JuMP.@variable(pm.model,
+#         base_name="$(nw)_delta_conv",
+#         start = 0.0
+#     )
 
-    if report
-        _PM.sol(pm, nw)[:delta_conv] = delta_conv
-    end
-end
+#     if report
+#         _PM.sol(pm, nw)[:delta_conv] = delta_conv
+#     end
+# end
 
 
 # function variable_dc_droop_control(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)

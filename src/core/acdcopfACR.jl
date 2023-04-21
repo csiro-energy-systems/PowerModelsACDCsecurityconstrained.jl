@@ -359,12 +359,12 @@ function constraint_converter_losses(pm::_PM.AbstractACRModel, n::Int, i::Int, a
     JuMP.@constraint(pm.model, pconv_ac + pconv_dc == a + b * ic + c * ics)
 end
 
-function constraint_converter_current(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)  # Constraint Template
-    conv = _PM.ref(pm, nw, :convdc, i)
-    Vmax = conv["Vmmax"]
-    Imax = conv["Imax"]
-    constraint_converter_current(pm, nw, i, Vmax, Imax)
-end
+# function constraint_converter_current(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)  # Constraint Template
+#     conv = _PM.ref(pm, nw, :convdc, i)
+#     Vmax = conv["Vmmax"]
+#     Imax = conv["Imax"]
+#     constraint_converter_current(pm, nw, i, Vmax, Imax)
+# end
 function constraint_converter_current(pm::_PM.AbstractACRModel, n::Int, i::Int, Umax, Imax) # Constraint
     vrc = _PM.var(pm, n, :vrc, i)
     vic = _PM.var(pm, n, :vic, i)

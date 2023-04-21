@@ -159,18 +159,18 @@ end
 
 
 ##################### acp.jl ############################################################################################################################################################################
-function constraint_ohms_dc_branch_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
-    branch = _PM.ref(pm, nw, :branchdc, i)
-    f_bus = branch["fbusdc"]
-    t_bus = branch["tbusdc"]
-    rate = branch["rateA"]
-    f_idx = (i, f_bus, t_bus)
-    t_idx = (i, t_bus, f_bus)
+# function constraint_ohms_dc_branch_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+#     branch = _PM.ref(pm, nw, :branchdc, i)
+#     f_bus = branch["fbusdc"]
+#     t_bus = branch["tbusdc"]
+#     rate = branch["rateA"]
+#     f_idx = (i, f_bus, t_bus)
+#     t_idx = (i, t_bus, f_bus)
 
-    p = _PM.ref(pm, nw, :dcpol)
+#     p = _PM.ref(pm, nw, :dcpol)
 
-    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p, rate)
-end
+#     constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p, rate)
+# end
 function constraint_ohms_dc_branch_soft(pm::_PM.AbstractACPModel, n::Int, i::Int, f_bus, t_bus, f_idx, t_idx, r, p, rate)
     p_dc_fr = _PM.var(pm, n,  :p_dcgrid, f_idx)
     p_dc_to = _PM.var(pm, n,  :p_dcgrid, t_idx)
@@ -313,8 +313,8 @@ end
 function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int, ep)
     vm_1 = _PM.var(pm, n_1, :vm, i)
     vm_2 = _PM.var(pm, n_2, :vm, i)
-    vm_pos = _PM.var(pm, n_2, :vg_pos, i)
-    vm_neg = _PM.var(pm, n_2, :vg_neg, i)
+    # vm_pos = _PM.var(pm, n_2, :vg_pos, i)
+    # vm_neg = _PM.var(pm, n_2, :vg_neg, i)
     vmub = JuMP.upper_bound(_PM.var(pm, :vm, i, nw=n_1))
     vmlb = JuMP.lower_bound(_PM.var(pm, :vm, i, nw=n_1))
     gen_id = _PM.ref(pm, :bus_gens, nw=n_2, i)[1]
@@ -329,8 +329,8 @@ function constraint_c1_gen_power_reactive_response_ap(pm::_PM.AbstractACPModel, 
     # JuMP.@NLconstraint(pm.model, qglb == qglb1 - ep*log(1 + exp((vmub-vm_1)/ep)))     # relaxing
     # JuMP.@constraint(pm.model, qg >= qglb)
 
-    JuMP.set_upper_bound(vm_pos, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
-    JuMP.set_upper_bound(vm_neg, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
+    # JuMP.set_upper_bound(vm_pos, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
+    # JuMP.set_upper_bound(vm_neg, JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)) - JuMP.lower_bound(_PM.var(pm, n_1, :vm, i)))
 
 
     JuMP.set_upper_bound(_PM.var(pm, n_2, :vm, i), JuMP.upper_bound(_PM.var(pm, n_1, :vm, i)))

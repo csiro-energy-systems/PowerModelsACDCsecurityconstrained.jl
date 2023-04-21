@@ -420,15 +420,15 @@ mpc.contingencies = [
 mpc.dcpol=2;  % numbers of poles (1=monopolar grid, 2=bipolar grid)
 
 %% bus data
-%column_names%   busdc_i grid    Pdc     Vdc     basekVdc    Vdcmax  Vdcmin  Cdc 
+%column_names%   busdc_i grid    Pdc     Vdc     basekVdc    Vdcmax  Vdcmin  Cdc area
 mpc.busdc = [
-    1      1       0       1       150         1.1     0.9     0;
-    2      1       0       1       150         1.1     0.9     0;
-    3      1       0       1       150         1.1     0.9     0;
-    4      2       0       1       300         1.1     0.9     0;
-    5      2       0       1       300         1.1     0.9     0;
-    6      2       0       1       300         1.1     0.9     0;
-    7      2       0       1       300         1.1     0.9     0;
+    1      1       0       1       150         1.1     0.9     0	12;
+    2      1       0       1       150         1.1     0.9     0	11;
+    3      1       0       1       150         1.1     0.9     0	14;
+    4      2       0       1       300         1.1     0.9     0	13;
+    5      2       0       1       300         1.1     0.9     0	13;
+    6      2       0       1       300         1.1     0.9     0	14;
+    7      2       0       1       300         1.1     0.9     0	14;
 ];
 
 %% converters

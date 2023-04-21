@@ -56,10 +56,11 @@ function constraint_ohms_dc_branch_soft(pm::_PM.AbstractPowerModel, i::Int; nw::
     branch = _PM.ref(pm, nw, :branchdc, i)
     f_bus = branch["fbusdc"]
     t_bus = branch["tbusdc"]
+    rate = branch["rateA"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
     p = _PM.ref(pm, nw, :dcpol)
 
-    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p)
+    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p, rate)
 end

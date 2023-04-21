@@ -8,7 +8,9 @@ function run_ACDC_scopf_re_dispatch(network::Dict{String,<:Any}, result_ACDC_sco
     data = deepcopy(network)
     # updating reference point 
     for i = 1:length(data["gen"])
-        data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+        if data["gen"]["$i"]["gen_status"] != 0
+            data["gen"]["$i"]["pgref"] = result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"]["$i"]["pg"]
+        end
     end 
     # embedding unsecure contingencies
     if haskey(result_ACDC_scopf_soft, "gen_contingencies_unsecure") 

@@ -75,7 +75,7 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 #vio_flag = false
                 rating = branch[rate_key]           #*1.1
 
-                if s_fr > rating || s_to > rating
+                if s_fr > rating || s_to > (rating)
                     if (s_fr - rating) >= (s_to - rating)
                     sm_vio += s_fr - rating
                     #vio_data["branch"] = Dict(i => s_fr - rating)
@@ -119,7 +119,7 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
                 #vio_flag = false
                 rating = branchdc[rate_keydc]
 
-                if s_fr > rating || s_to > rating
+                if s_fr > rating || s_to > (rating)
                     if (s_fr - rating) >= (s_to - rating)
                         smdc_vio += s_fr - rating
                         # vio_data["branchdc"] = Dict(i => s_fr - rating)

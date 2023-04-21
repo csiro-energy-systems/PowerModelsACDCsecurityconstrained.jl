@@ -17,14 +17,14 @@ const PM_sc = PowerModelsSecurityConstrained
 const PM_acdc_sc = PowerModelsACDCsecurityconstrained
 
 
-nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "max_cpu_time" => 3600.0)  # "print_level"=>0, "tol"=>1e-6
+nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "tol"=>1e-3, "max_iter" => 5000)  # "print_level"=>0, "tol"=>1e-6, "max_iter" => 5000
 lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
 mip_solver = optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
 minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_solver, "mip_solver"=>mip_solver)
 
 
 c1_ini_file = "./data/c1/inputfiles.ini"
-c1_scenarios = "scenario_04"  #, "scenario_02"]
+c1_scenarios = "scenario_06"  #, "scenario_02"]
 c1_cases = parse_c1_case(c1_ini_file,scenario_id=c1_scenarios)
 data = build_c1_pm_model(c1_cases)
 
@@ -84,15 +84,39 @@ for i=1:length(data["branch"])
     end
 end
 
+# for i=1:length(data["shunt"])
+#     if data["shunt"]["$i"]["dispatchable"] == true
+#         delete!(data["shunt"], "$i")
+#     end
+# end 
+
+
+data["dcpol"] = 2
+data["busdc"]=Dict{String, Any}()
+data["busdc"]["1"]=Dict{String, Any}("basekVdc" => 345, "source_id" => Any["busdc", 1], "Vdc" => 1, "busdc_i" => 1, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 1, "Pdc" => 0)
+data["busdc"]["2"]=Dict{String, Any}("basekVdc" => 345, "source_id" => Any["busdc", 2], "Vdc" => 1, "busdc_i" => 2, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 2, "Pdc" => 0)
+# data["busdc"]["3"]=Dict{String, Any}("basekVdc" => 345, "source_id" => Any["busdc", 3], "Vdc" => 1, "busdc_i" => 1, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 1, "Pdc" => 0)
+# data["busdc"]["4"]=Dict{String, Any}("basekVdc" => 345, "source_id" => Any["busdc", 4], "Vdc" => 1, "busdc_i" => 2, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 2, "Pdc" => 0)
+
+data["branchdc"]=Dict{String, Any}()
+data["branchdc"]["1"]=Dict{String, Any}("c" => 0, "r" => 0.001, "status" => 1, "rateB" => 1575, "fbusdc" => 1, "source_id" => Any["branchdc", 1, 2, "R" ], "rateA" => 1575, "l" => 0, "index" => 1, "rateC" => 1575, "tbusdc" => 2)
+# data["branchdc"]["2"]=Dict{String, Any}("c" => 0, "r" => 0.001, "status" => 1, "rateB" => 1575, "fbusdc" => 1, "source_id" => Any["branchdc", 1, 2, "R" ], "rateA" => 1575, "l" => 0, "index" => 1, "rateC" => 1575, "tbusdc" => 2)
+data["convdc"]=Dict{String, Any}()
+data["convdc"]["1"]=Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -58.6274, "islcc" => 0, "LossA" => 1.103, "Qacmin" => -50, "rc" => 0.01, "source_id" => Any["convdc", 1], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 1, "busac_i" => 95, "tm" => 1, "type_dc" => 3, "Q_g" => -40, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -2000, "Qacmax" => 1000, "index" => 1, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -60, "transformer" => 1, "bf" => 0.01, "LossCinv" => 2.885)
+data["convdc"]["2"]=Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => 21.9013, "islcc" => 0, "LossA" => 1.103, "Qacmin" => -50, "rc" => 0.01, "source_id" => Any["convdc", 2], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 2, "busac_i" => 96, "tm" => 1, "type_dc" => 2, "Q_g" => 0, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -2000, "Qacmax" => 1000, "index" => 2, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 0, "transformer" => 1, "bf" => 0.01, "LossCinv" => 2.885)
+# data["convdc"]["3"]=Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -58.6274, "islcc" => 0, "LossA" => 1.103, "Qacmin" => -50, "rc" => 0.01, "source_id" => Any["convdc", 1], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 1, "busac_i" => 1533, "tm" => 1, "type_dc" => 3, "Q_g" => -40, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -2000, "Qacmax" => 1000, "index" => 1, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -60, "transformer" => 1, "bf" => 0.01, "LossCinv" => 2.885)
+# data["convdc"]["4"]=Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => 21.9013, "islcc" => 0, "LossA" => 1.103, "Qacmin" => -50, "rc" => 0.01, "source_id" => Any["convdc", 2], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 2, "busac_i" => 1545, "tm" => 1, "type_dc" => 3, "Q_g" => 0, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -2000, "Qacmax" => 1000, "index" => 2, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 0, "transformer" => 1, "bf" => 0.01, "LossCinv" => 2.885)
+
+
 # for (i,branch) in data["branch"]
 #     branch["rate_a"] = min(branch["rate_a"], branch["rate_b"], branch["rate_c"])
 #     branch["rate_c"] = max(branch["rate_a"], branch["rate_b"], branch["rate_c"])
 # end
 
-data["dcpol"] = 2
-data["busdc"] = Dict{String, Any}()
-data["busdc"]["1"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 1], "area"=>1, "busdc_i"=>1, "grid"=>1, "index"=>1, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
-data["busdc"]["2"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 2], "area"=>1, "busdc_i"=>2, "grid"=>1, "index"=>2, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
+# data["dcpol"] = 2
+# data["busdc"] = Dict{String, Any}()
+# data["busdc"]["1"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 1], "area"=>1, "busdc_i"=>1, "grid"=>1, "index"=>1, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
+# data["busdc"]["2"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 2], "area"=>1, "busdc_i"=>2, "grid"=>1, "index"=>2, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
 # data["busdc"]["3"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 3], "area"=>1, "busdc_i"=>3, "grid"=>1, "index"=>3, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
 # data["busdc"]["4"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 4], "area"=>1, "busdc_i"=>4, "grid"=>1, "index"=>4, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
 # data["busdc"]["5"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 5], "area"=>1, "busdc_i"=>5, "grid"=>1, "index"=>5, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
@@ -103,8 +127,8 @@ data["busdc"]["2"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "sou
 # data["busdc"]["10"] = Dict{String, Any}("Vdc"=>1, "Cdc"=>0, "basekVdc"=>345, "source_id"=>Any["busdc", 10], "area"=>1, "busdc_i"=>10, "grid"=>1, "index"=>10, "Vdcmax"=>1.1, "Vdcmin"=>0.9, "Pdc" => 0)
 
 
-data["branchdc"] = Dict{String, Any}()
-data["branchdc"]["1"] = Dict{String, Any}("c"=>0, "r"=>0.052,"status"=>1, "rateB"=>100, "fbusdc"=>1, "source_id"=>Any["branchdc", 1], "rateA"=>100, "l"=>0, "index"=>1, "rateC"=>110, "tbusdc" => 2) #3
+# data["branchdc"] = Dict{String, Any}()
+# data["branchdc"]["1"] = Dict{String, Any}("c"=>0, "r"=>0.052,"status"=>1, "rateB"=>100, "fbusdc"=>1, "source_id"=>Any["branchdc", 1], "rateA"=>100, "l"=>0, "index"=>1, "rateC"=>110, "tbusdc" => 2) #3
 # data["branchdc"]["2"] = Dict{String, Any}("c"=>0, "r"=>0.052, "status"=>1, "rateB"=>100, "fbusdc"=>2, "source_id"=>Any["branchdc", 2], "rateA"=>100, "l"=>0, "index"=>2, "rateC"=>110, "tbusdc" => 3)
 # data["branchdc"]["3"] = Dict{String, Any}("c"=>0, "r"=>0.052, "status"=>1, "rateB"=>100, "fbusdc"=>1, "source_id"=>Any["branchdc", 3], "rateA"=>100, "l"=>0, "index"=>3, "rateC"=>110, "tbusdc" => 5)
 # data["branchdc"]["4"] = Dict{String, Any}("c"=>0, "r"=>0.052, "status"=>1, "rateB"=>100, "fbusdc"=>2, "source_id"=>Any["branchdc", 4], "rateA"=>100, "l"=>0, "index"=>4, "rateC"=>110, "tbusdc" => 6)
@@ -118,9 +142,9 @@ data["branchdc"]["1"] = Dict{String, Any}("c"=>0, "r"=>0.052,"status"=>1, "rateB
 # data["branchdc"]["12"] = Dict{String, Any}("c"=>0, "r"=>0.072, "status"=>1, "rateB"=>100, "fbusdc"=>3, "source_id"=>Any["branchdc", 12], "rateA"=>100, "l"=>0, "index"=>13, "rateC"=>110, "tbusdc" => 10)
 # data["branchdc"]["13"] = Dict{String, Any}("c"=>0, "r"=>0.072, "status"=>1, "rateB"=>100, "fbusdc"=>6, "source_id"=>Any["branchdc", 13], "rateA"=>100, "l"=>0, "index"=>14, "rateC"=>110, "tbusdc" => 9)
 
-data["convdc"]=Dict{String, Any}()
-data["convdc"]["1"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -58.6274, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 1], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 1, "busac_i" => 2, "tm" => 1, "type_dc" => 2, "Q_g" => 0, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 1, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 0, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
-data["convdc"]["2"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => 21.9013, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 2], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 2, "busac_i" => 3, "tm" => 1, "type_dc" => 3, "Q_g" => -32.09, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 2, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -19.79, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
+# data["convdc"]=Dict{String, Any}()
+# data["convdc"]["1"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -58, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 1], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 1, "busac_i" => 2, "tm" => 1, "type_dc" => 2, "Q_g" => 0, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 1, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 0, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
+# data["convdc"]["2"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => 20, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 2], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 2, "busac_i" => 3, "tm" => 1, "type_dc" => 3, "Q_g" => -32.09, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 2, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -19.79, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
 # data["convdc"]["3"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -71.80176606605387, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 3], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 3, "busac_i" => 3, "tm" => 1, "type_dc" => 3, "Q_g" => -52.67, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 3, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -49.99, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
 # data["convdc"]["4"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -26.803780303012843, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 4], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 4, "busac_i" => 4, "tm" => 1, "type_dc" => 3, "Q_g" => -52.67, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 4, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -49.99, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
 # data["convdc"]["5"] = Dict{String, Any}("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 100, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0079, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 1.1, "status" => 1, "Pdcset" => -20.35929061609132, "islcc" => 0, "LossA" => 1.1033, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc", 5], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 5, "busac_i" => 5, "tm" => 1, "type_dc" => 3, "Q_g" => -20.29, "LossB" => 0.887, "basekVac" => 345, "LossCrec" => 2.885, "droop" => 0.005, "Pacmin" => -100, "Qacmax" => 100, "index" => 5, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -49.99, "transformer" => 0, "bf" => 0.01, "LossCinv" => 2.885)
@@ -137,6 +161,12 @@ for i=1:length(data["convdc"])
     data["convdc"]["$i"]["Vdclow"] = 0.98
     data["convdc"]["$i"]["Vdchigh"] = 1.02
 end
+
+# for i=1:length(data["load"])
+#     data["load"]["$i"]["pd"] = data["load"]["$i"]["pd"] * 0.8
+#     data["load"]["$i"]["qd"] = data["load"]["$i"]["qd"] * 0.8
+# end
+
 
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
@@ -174,8 +204,8 @@ setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => tru
 
 
 # data_SI = deepcopy(data)
-# result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
-result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
+@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
+# @time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
 
 # for (i, convdc) in result_acdcopf["solution"]["convdc"]
 #     println("$i .............................. pconv = $(convdc["pconv"]) ............. qconv = $(convdc["qconv"]).........................pdc = $(convdc["pdc"])\n")

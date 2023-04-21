@@ -98,7 +98,7 @@ data["shunt"]["1"] = Dict{String, Any}("b2" => 0.0, "n1" => 1, "adjm" => 0, "mod
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
 # data_SI = deepcopy(data)
-# data_minlp = deepcopy(data)
+data_minlp = deepcopy(data)
 result_ACDC_scopf_soft_ndc = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
 
 @time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
@@ -110,25 +110,45 @@ result_ACDC_scopf_soft_ndc = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.
 
 ## visuallization !!!
 
-f4(vdc) = pref_dc + (   -((1 / k_droop * (vdchigh - vdc)) - ep * log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep))) 
-        -(-(1 / k_droop * (vdcmax - vdc) ) + ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) )
-        -((1 / k_droop * (vdclow - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep)))
-        -(-((1 / k_droop * (vdcmin - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)))   ))
+f4(vdc) = pref_dc + (   -(1 / k_droop * (vdchigh - vdc)) + ep*log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep)) 
+        +(1 / k_droop * (vdcmax - vdc)) - ep*log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) 
+        -(1 / k_droop * (vdclow - vdc)) - ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep))
+        +(1 / k_droop * (vdcmin - vdc)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)) )
+
+
+f4s(vdc) = pref_dc + (   (1 / k_droop * (vdcmax-vdchigh-vdclow+vdcmin)) + ep*log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep)) 
+         - ep*log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) 
+         - ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep))
+         + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)) )
+
+f4st(vdc) = pref_dc + (    ep*log(1 + exp(((1 / k_droop * (vdchigh - vdc) ) - vdcmax + vdc)/ep)) 
+         - ep*log(1 + exp(((1 / k_droop * (vdcmax - vdc)  ) - 2*vdcmax + vdchigh + vdc)/ep)) 
+         - ep*log(1 + exp((-(1 / k_droop * (vdclow - vdc) ) - vdc + vdcmin)/ep))
+         + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) ) - vdc + 2*vdcmin - vdclow )/ep)) )
+
 
 f6(vdc) = pref_dc + ( vdc> vdcmax ? (-1 / k_droop*(vdchigh -vdcmax)) : vdc > vdchigh && vdc <= vdcmax ? (-1 / k_droop * (vdchigh - vdc)) : vdc >= vdcmin && vdc < vdclow ? (-1 / k_droop * (vdclow - vdc)) : vdc < vdcmin ? (-1 / k_droop * (vdclow - vdcmin)) : 0)        
+# plot(size = (600,400), grid = false, legend = false)
+# vspan!([vdclow, vdchigh], linecolor = :grey90, fillcolor = :grey90)
+# plot!(f6, 0.85, 1.15, linewidth=1.4, linecolor = :black)
+# plot!(f4, 0.85, 1.15, linewidth=1.4, linecolor = :black)
+fig = plot(f4, 0.85, 1.15, linewidth=1.4, linecolor = :black, grid = false, legend = false, dpi = 600)
+plot!(f4s, 0.85, 1.15)
+plot!(f4st, 0.85, 1.15)
+savefig(fig, "./plots/fig.png")
 
 # droop Curve Plot
 plt = Plots.plot(layout=(2,1), size = (600,400), xformatter=:latex, yformatter=:latex, legend = :outertop)
 sp=2
-    i=sp+1
+    i=3
     pref_dc = data["convdc"]["$i"]["Pdcset"] 
     Vdcset = data["convdc"]["$i"]["Vdcset"]
     vdcmax = data["convdc"]["$i"]["Vmmax"]
     vdcmin = data["convdc"]["$i"]["Vmmin"]
-    vdchigh = data["convdc"]["$i"]["Vdchigh"]
+    vdchigh = data["convdc"]["$i"]["Vdchigh"] 
     vdclow = data["convdc"]["$i"]["Vdclow"]
-    k_droop = data["convdc"]["$i"]["droop"]
-    ep = data["convdc"]["$i"]["ep"] = 0.1
+    k_droop = data["convdc"]["$i"]["droop"] 
+    ep = data["convdc"]["$i"]["ep"] 
  
     vdc = [nw["busdc"]["$i"]["vm"] for (j, nw) in result_ACDC_scopf_soft_minlp["final"]["solution"]["nw"] if j !=="0"]
     pdc = [nw["convdc"]["$i"]["pdc"] for (j, nw) in result_ACDC_scopf_soft_minlp["final"]["solution"]["nw"] if j !=="0"]
@@ -402,3 +422,6 @@ line_loading_dc_final_minlp = []
 for i=1:length(data["branchdc"])
 push!(line_loading_dc_final_minlp, (result_ACDC_scopf_soft_minlp["final"]["solution"]["nw"]["0"]["branchdc"]["$i"]["pf"] /data["branchdc"]["$i"]["rateC"] )*100)
 end
+
+
+
