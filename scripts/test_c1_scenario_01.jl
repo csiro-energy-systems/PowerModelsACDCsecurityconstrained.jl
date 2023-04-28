@@ -108,11 +108,17 @@ end
 #data["gen_contingencies"][2]=(idx = 1, label = "GEN-1-1", type = "gen")
 #data["gen_contingencies"][3]=(idx = 2, label = "GEN-2-1", type = "gen")
 
+data["slack"] = Dict{String, Any}()
+data["slack"]["1"] = Dict{String, Any}()
+data["slack"]["1"]["cost"] = [0, 1000, 0.01, 5E5, 0.1, 5E7, 10, 5E15]
+data["slack"]["1"]["ncost"] = 4
+
+
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
-data_SI = deepcopy(data)
+# data_SI = deepcopy(data)
 # result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
-result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data_SI, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
+result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
 
 
 

@@ -167,7 +167,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             _PMSC.info(_LOGGER, "no new violated contingencies found, scopf fixed-point reached")            
             break
         elseif contingencies_found <= 0 && contingencies.total_cuts_pre_filter >= (iteration - 1)
-            _PMSC.info(_LOGGER, "looking for new violated contingencies")
+            _PMSC.info(_LOGGER, "looking for new contingencies")
             skip_itr_flag = true
             contingencies_found = 1
         else

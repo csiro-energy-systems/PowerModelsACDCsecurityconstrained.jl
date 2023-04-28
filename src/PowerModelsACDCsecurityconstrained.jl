@@ -68,6 +68,7 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/checkscopf.jl") # Temporary to check & verify 
 
+    include("core/objective.jl")
 
     include("core/re_dispatch_algo.jl") 
     include("core/contingency_filter_SI.jl")
