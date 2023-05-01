@@ -2,7 +2,7 @@
 An OPF formulation for integrated HVAC and HVDC grid.
 
 """
-export run_acdcpf
+
 
 ""
 function run_acdcpf_GM(file::String, model_type::Type, solver; kwargs...)
@@ -34,6 +34,8 @@ function post_acdcpf_GM(pm::_PM.AbstractPowerModel)
 
     _PM.constraint_model_voltage(pm)
     _PMACDC.constraint_voltage_dc(pm)
+
+     variable_dc_droop_control(pm)
 
 
     for (i,bus) in _PM.ref(pm, :ref_buses)
@@ -79,15 +81,82 @@ function post_acdcpf_GM(pm::_PM.AbstractPowerModel)
         if conv["type_dc"] == 2
             _PMACDC.constraint_dc_voltage_magnitude_setpoint(pm, c)
             _PMACDC.constraint_reactive_conv_setpoint(pm, c)
-        else
-            if conv["type_ac"] == 2
-                _PMACDC.constraint_active_conv_setpoint(pm, c)
-            else
-                _PMACDC.constraint_active_conv_setpoint(pm, c)
-                _PMACDC.constraint_reactive_conv_setpoint(pm, c)
-            end
+        elseif conv["type_dc"] == 3
+            constraint_dc_droop_control(pm, c)
+        elseif conv["type_dc"] == 1 &&  conv["type_ac"] == 2 || conv["type_ac"] == 3
+            _PMACDC.constraint_active_conv_setpoint(pm, c)
+        elseif conv["type_dc"] == 1 &&  conv["type_ac"] != 2 || conv["type_ac"] != 3
+            _PMACDC.constraint_active_conv_setpoint(pm, c)
+            _PMACDC.constraint_reactive_conv_setpoint(pm, c)
         end
+            
         _PMACDC.constraint_converter_losses(pm, c)
         _PMACDC.constraint_converter_current(pm, c)
+    end
+end
+
+
+
+""
+function run_acdcopf_droop(file::String, model_type::Type, solver; kwargs...)
+    data = _PM.parse_file(file)
+    PowerModelsACDC.process_additional_data!(data)
+    return run_acdcopf_droop(data, model_type, solver; ref_extensions = [add_ref_dcgrid!], kwargs...)
+end
+
+""
+function run_acdcopf_droop(data::Dict{String,Any}, model_type::Type, solver; kwargs...)
+    return _PM.solve_model(data, model_type, solver, build_acdcopf_droop; ref_extensions = [_PMACDC.add_ref_dcgrid!], kwargs...)
+end
+
+""
+function build_acdcopf_droop(pm::_PM.AbstractPowerModel)
+    _PM.variable_bus_voltage(pm)
+    _PM.variable_gen_power(pm)
+    _PM.variable_branch_power(pm)
+
+    _PMACDC.variable_active_dcbranch_flow(pm)
+    _PMACDC.variable_dcbranch_current(pm)
+    _PMACDC.variable_dc_converter(pm)
+    _PMACDC.variable_dcgrid_voltage_magnitude(pm)
+
+    variable_dc_droop_control(pm)
+
+    _PM.objective_min_fuel_cost(pm)
+
+    _PM.constraint_model_voltage(pm)
+    _PMACDC.constraint_voltage_dc(pm)
+
+    for i in _PM.ids(pm, :ref_buses)
+        _PM.constraint_theta_ref(pm, i)
+    end
+
+    for i in _PM.ids(pm, :bus)
+        _PMACDC.constraint_power_balance_ac(pm, i)
+    end
+
+    for i in _PM.ids(pm, :branch)
+        _PM.constraint_ohms_yt_from(pm, i)
+        _PM.constraint_ohms_yt_to(pm, i)
+        _PM.constraint_voltage_angle_difference(pm, i) #angle difference across transformer and reactor - useful for LPAC if available?
+        _PM.constraint_thermal_limit_from(pm, i)
+        _PM.constraint_thermal_limit_to(pm, i)
+    end
+    for i in _PM.ids(pm, :busdc)
+        _PMACDC.constraint_power_balance_dc(pm, i)
+    end
+    for i in _PM.ids(pm, :branchdc)
+        _PMACDC.constraint_ohms_dc_branch(pm, i)
+    end
+    for i in _PM.ids(pm, :convdc)
+        _PMACDC.constraint_converter_losses(pm, i)
+        _PMACDC.constraint_converter_current(pm, i)
+        _PMACDC.constraint_conv_transformer(pm, i)
+        _PMACDC.constraint_conv_reactor(pm, i)
+        _PMACDC.constraint_conv_filter(pm, i)
+        if pm.ref[:it][:pm][:nw][_PM.nw_id_default][:convdc][i]["islcc"] == 1
+            _PMACDC.constraint_conv_firing_angle(pm, i)
+        end
+        constraint_dc_droop_control(pm, i) 
     end
 end
