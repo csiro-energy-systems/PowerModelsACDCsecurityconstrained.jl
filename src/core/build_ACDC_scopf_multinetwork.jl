@@ -9,7 +9,7 @@ function build_ACDC_scopf_multinetwork(network::Dict{String,<:Any})
         error(_LOGGER, "build ACDC scopf can only be used on single networks")
     end
 
-    contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"])   
+    contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"]) + length(network["convdc_contingencies"])   
 
     _PMSC.info(_LOGGER, "building ACDC scopf multi-network with $(contingencies+1) networks")
 
@@ -111,6 +111,34 @@ function build_ACDC_scopf_multinetwork(network::Dict{String,<:Any})
             end
             if haskey(network["area_gens"], to_busdc["area"])                           
                 cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][to_busdc["area"]])         
+            end
+
+            network_id += 1
+        end
+
+        for cont in base_network["convdc_contingencies"]         
+            cont_nw = mn_data["nw"]["$(network_id)"]
+            cont_nw["name"] = cont.label
+            cont_convdc = cont_nw["convdc"]["$(cont.idx)"]        
+            cont_convdc["status"] = 0                                 
+
+            gen_buses = Set{Int}()
+            for (i,gen) in cont_nw["gen"]
+                if gen["gen_status"] != 0
+                    push!(gen_buses, gen["gen_bus"])
+                end
+            end
+            cont_nw["gen_buses"] = gen_buses
+
+            busac = cont_nw["bus"]["$(cont_convdc["busac_i"])"]          
+            busdc = cont_nw["busdc"]["$(cont_convdc["busdc_i"])"]          
+
+            cont_nw["response_gens"] = Set()
+            if haskey(cont_nw["area_gens"], busac["area"])                          
+                cont_nw["response_gens"] = cont_nw["area_gens"][busac["area"]]       
+            end
+            if haskey(network["area_gens"], busdc["area"])                           
+                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][busdc["area"]])         
             end
 
             network_id += 1

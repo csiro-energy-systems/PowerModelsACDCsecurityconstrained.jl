@@ -1,19 +1,22 @@
-function constraint_power_balance_ac_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+function constraint_power_balance_ac_shunt_dispatch_soft(pm::_PM.AbstractPowerModel,i::Int; nw::Int=_PM.nw_id_default)
     bus = _PM.ref(pm, nw, :bus, i)
     bus_arcs = _PM.ref(pm, nw, :bus_arcs, i)
     bus_arcs_dc = _PM.ref(pm, nw, :bus_arcs_dc, i)
     bus_gens = _PM.ref(pm, nw, :bus_gens, i)
     bus_convs_ac = _PM.ref(pm, nw, :bus_convs_ac, i)
     bus_loads = _PM.ref(pm, nw, :bus_loads, i)
-    bus_shunts = _PM.ref(pm, nw, :bus_shunts, i)
+   
 
-    pd = Dict(k => _PM.ref(pm, nw, :load, k, "pd") for k in bus_loads)
-    qd = Dict(k => _PM.ref(pm, nw, :load, k, "qd") for k in bus_loads)
+    bus_shunts_const = _PMSC.ref(pm, nw, :bus_shunts_const, i)
+    bus_shunts_var = _PMSC.ref(pm, nw, :bus_shunts_var, i)
 
-    gs = Dict(k => _PM.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
-    bs = Dict(k => _PM.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
+    bus_pd = Dict(k => _PM.ref(pm, nw, :load, k, "pd") for k in bus_loads)
+    bus_qd = Dict(k => _PM.ref(pm, nw, :load, k, "qd") for k in bus_loads)
 
-    constraint_power_balance_ac_soft(pm, nw, i, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts, pd, qd, gs, bs)
+    bus_gs_const = Dict(k => _PM.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts_const)
+    bus_bs_const = Dict(k => _PM.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts_const)
+
+    constraint_power_balance_ac_shunt_dispatch_soft(pm, nw, i, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts_const, bus_shunts_var, bus_pd, bus_qd, bus_gs_const, bus_bs_const)
 end
 
 
@@ -53,10 +56,11 @@ function constraint_ohms_dc_branch_soft(pm::_PM.AbstractPowerModel, i::Int; nw::
     branch = _PM.ref(pm, nw, :branchdc, i)
     f_bus = branch["fbusdc"]
     t_bus = branch["tbusdc"]
+    rate = branch["rateA"]
     f_idx = (i, f_bus, t_bus)
     t_idx = (i, t_bus, f_bus)
 
     p = _PM.ref(pm, nw, :dcpol)
 
-    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p)
+    constraint_ohms_dc_branch_soft(pm, nw, i, f_bus, t_bus, f_idx, t_idx, branch["r"], p, rate)
 end

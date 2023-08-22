@@ -1,18 +1,25 @@
 module PowerModelsACDCsecurityconstrained
 
+    import JuMP
     import PowerModels
+    # import StochasticPowerModels
     import PowerModelsACDC
     import PowerModelsSecurityConstrained
     import Memento
-    import JuMP
+    import LinearAlgebra
     import InfrastructureModels
-    
+    # import PolyChaos
+    # import KernelDensity
     
 
     const _PM = PowerModels
     const _PMSC = PowerModelsSecurityConstrained
     const _PMACDC = PowerModelsACDC
     const _IM = InfrastructureModels
+    # const _SPM = StochasticPowerModels
+    const _LA = LinearAlgebra
+    # const _PCE = PolyChaos
+    # const _KDE = KernelDensity
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
@@ -29,6 +36,7 @@ module PowerModelsACDCsecurityconstrained
     
     include("core/ACDC_scopf.jl")
     include("core/ACDC_scopf_soft.jl")
+    include("core/ACDC_scopf_soft_minlp.jl")
 
   
     include("core/contingency_filters.jl")
@@ -40,9 +48,29 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/build_ACDC_scopf_multinetwork.jl")
     
-    # include("core/ACDC_pf.jl")
-    # include("core/conting_soft_v.jl")
-    # include("core/PF_convex_cuts.jl")
+    include("core/ACDC_pf.jl")                  # TODO Is needed ?
+    include("core/conting_soft_v.jl")
+    include("core/ACDC_scopf_ptdf_dcdf_cuts.jl")
+    include("core/ACDC_scopf_ptdf_dcdf_cuts_iterative.jl")
+    #include("core/ACDC_R_pf.jl")
+    #include("core/ACDC_R_cv.jl")
     
+    # include("core/ACDC_opf_stochastic.jl")   ## Stochastic
+    # include("core/variable_stochastic.jl")
+
+    include("core/acdcopfACR.jl")       #ACR formulation
+
+    include("core/ACDC_re_dispatch.jl")       # Re-dispatch
+
+    include("core/ACDC_re_dispatch_ots.jl")       # Re-dispatch + ots
+
+    include("core/ACDC_re_dispatch_ots_oltc_pst.jl")    # Re-dispatch + ots + oltc + pst
+
+    include("core/checkscopf.jl") # Temporary to check & verify 
+
+    include("core/objective.jl")
+
+    include("core/re_dispatch_algo.jl") 
+    include("core/contingency_filter_SI.jl")
 
 end # module

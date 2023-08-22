@@ -16,7 +16,7 @@ end
 
 
 # enables support for v[1], required for objective_variable_pg_cost when pg is an expression
-Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
+# Base.getindex(v::JuMP.GenericAffExpr, i::Int64) = v
 
 ""
 function build_scopf(pm::_PM.AbstractPowerModel)
@@ -106,6 +106,7 @@ function build_scopf(pm::_PM.AbstractPowerModel)
             # setup the linear response function or fix value to base case
             if i in response_gens
                 _PMSC.constraint_c1_gen_power_real_response(pm, i, nw_1=0, nw_2=nw)
+                #constraint_c1_gen_power_real_response_ap(pm, i, nw_1=0, nw_2=nw)
             else
                 _PMSC.constraint_c1_gen_power_real_link(pm, i, nw_1=0, nw_2=nw)
             end
