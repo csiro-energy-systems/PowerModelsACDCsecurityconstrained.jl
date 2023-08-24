@@ -361,7 +361,7 @@ function variable_generator_reactive_power_bounds(pm::_PM.AbstractPowerModel; nw
     #report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :gen, :qglb, _PM.ids(pm, nw, :gen), qglb)
 end
 
-function variable_dc_converter_n(pm::_PM.AbstractPowerModel; kwargs...)
+function variable_dc_converter_soft(pm::_PM.AbstractPowerModel; kwargs...)
     _PMACDC.variable_conv_tranformer_flow(pm; kwargs...)
     _PMACDC.variable_conv_reactor_flow(pm; kwargs...)
 

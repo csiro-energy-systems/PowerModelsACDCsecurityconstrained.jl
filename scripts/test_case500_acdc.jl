@@ -1,5 +1,4 @@
-using Pkg
-Pkg.activate("./scripts")
+
 
 using Ipopt
 using Cbc
@@ -137,17 +136,18 @@ data["branchdc_contingencies"][12] = (idx = 1, label = "branchdc_12", type = "br
 data["branchdc_contingencies"][13] = (idx = 1, label = "branchdc_13", type = "branchdc")
 data["branchdc_contingencies"][14] = (idx = 1, label = "branchdc_14", type = "branchdc")
 
-data["convdc_contingencies"] = Vector{Any}(undef, 10)
-data["convdc_contingencies"][1] = (idx = 1, label = "Conv_1", type = "convdc")
-data["convdc_contingencies"][2] = (idx = 2, label = "Conv_2", type = "convdc")
-data["convdc_contingencies"][3] = (idx = 3, label = "Conv_3", type = "convdc")
-data["convdc_contingencies"][4] = (idx = 4, label = "Conv_4", type = "convdc")
-data["convdc_contingencies"][5] = (idx = 5, label = "Conv_5", type = "convdc")
-data["convdc_contingencies"][6] = (idx = 6, label = "Conv_6", type = "convdc")
-data["convdc_contingencies"][7] = (idx = 7, label = "Conv_7", type = "convdc")
-data["convdc_contingencies"][8] = (idx = 8, label = "Conv_8", type = "convdc")
-data["convdc_contingencies"][9] = (idx = 9, label = "Conv_9", type = "convdc")
-data["convdc_contingencies"][10] = (idx = 10, label = "Conv_10", type = "convdc")
+data["convdc_contingencies"] = []
+# data["convdc_contingencies"] = Vector{Any}(undef, 10)
+# data["convdc_contingencies"][1] = (idx = 1, label = "Conv_1", type = "convdc")
+# data["convdc_contingencies"][2] = (idx = 2, label = "Conv_2", type = "convdc")
+# data["convdc_contingencies"][3] = (idx = 3, label = "Conv_3", type = "convdc")
+# data["convdc_contingencies"][4] = (idx = 4, label = "Conv_4", type = "convdc")
+# data["convdc_contingencies"][5] = (idx = 5, label = "Conv_5", type = "convdc")
+# data["convdc_contingencies"][6] = (idx = 6, label = "Conv_6", type = "convdc")
+# data["convdc_contingencies"][7] = (idx = 7, label = "Conv_7", type = "convdc")
+# data["convdc_contingencies"][8] = (idx = 8, label = "Conv_8", type = "convdc")
+# data["convdc_contingencies"][9] = (idx = 9, label = "Conv_9", type = "convdc")
+# data["convdc_contingencies"][10] = (idx = 10, label = "Conv_10", type = "convdc")
 
 data["slack"] = Dict{String, Any}()
 data["slack"]["1"] = Dict{String, Any}()
@@ -156,6 +156,13 @@ data["slack"]["1"]["ncost"] = 4
 
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
+# for (i,branch) in data["branch"]
+#     if branch["br_status"] == 0
+#         delete!(data["branch"], i)
+#     end
+# end
+
+@time results = PM_acdc_sc.run_acdc_scopf_ptdf_dcdf_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_acdc_scopf_cuts, nlp_solver)
 
 # data_SI = deepcopy(data)
 # result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
@@ -166,3 +173,55 @@ setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => tru
 using Plots
 scatter([branch["pf"] for (i, branch) in result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["branch"]])
 scatter!([branchdc["pf"] for (i, branchdc) in result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["branchdc"]])
+
+for (i,branch) in data["branch"]
+    if branch["br_status"] == 0
+        println("$i...........$(branch["br_status"])")
+    end
+end
+
+## plots 
+
+gen_cont_index = [ i for (i, cont) in data["gen_contingencies"] ]
+branch_cont_index = [ i for (i, cont) in data["branch_contingencies"] ]
+branchdc_cont_index = [ i for (i, cont) in data["branchdc_contingencies"] ]
+
+pg_cont = [ result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"][i]["pg"] for (i, gen) in data["gen"] if gen["gen_status"] != 0 ]
+pg_cut = [  results["final"]["solution"]["gen"][i]["pg"] for (i, gen) in data["gen"] if gen["gen_status"] != 0 ]
+pg_diff = abs.(pg_cont.-pg_cut)
+
+qg_cont = [ result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["gen"][i]["qg"] for (i, gen) in data["gen"] if gen["gen_status"] != 0 ]
+qg_cut = [  results["final"]["solution"]["gen"][i]["qg"] for (i, gen) in data["gen"] if gen["gen_status"] != 0]
+qg_diff = abs.(qg_cont.-qg_cut)
+
+vm_cont = [ result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["bus"][i]["vm"] for (i, bus) in data["bus"] ]
+vm_cut = [  results["final"]["solution"]["bus"][i]["vm"] for (i, bus) in data["bus"] ]
+vm_diff = abs.(vm_cont.-vm_cut)
+
+va_cont = [ result_ACDC_scopf_soft["final"]["solution"]["nw"]["0"]["bus"][i]["va"] for (i, bus) in data["bus"] ]
+va_cut = [  results["final"]["solution"]["bus"][i]["va"] for (i, bus) in data["bus"] ]
+va_diff = abs.(va_cont.-va_cut)
+
+using Plots
+using LaTeXStrings
+using Plots.PlotMeasures
+
+plot(1:1:length(gen_cont_index), gen_cont_index, seriestype = :scatter, color = "blue", label = "generator contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black")  
+
+plot!(length(gen_cont_index):1:length(branch_cont_index)+length(gen_cont_index), branch_cont_index, seriestype = :scatter, color = "red", label = "branch contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box)  
+
+plot!((length(gen_cont_index)+length(branch_cont_index)):1:length(branchdc_cont_index)+(length(gen_cont_index)+length(branch_cont_index)), branchdc_cont_index, seriestype = :scatter, color = "green", label = "branchdc contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box)  
+
+plot(pg_cont, pg_cut, seriestype = :scatter, dpi = 600, size = (300,200), left_margin = [2mm 0mm], bottom_margin = 10px, color = "blue", label = L"{\mathrm{Active\;Power\;Setpoint\;(pu)}}", xlabel=L"{\mathrm{TSMP\;Model}}", ylabel=L"{\mathrm{Proposed\;Model}}", grid = true, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black")  
+
+plot!(minimum(pg_cont):0.001:maximum(pg_cont), minimum(pg_cont):0.001:maximum(pg_cont), label=false)
+savefig("active_power_setpoint.png")
+
+plot(qg_cont, qg_cut, seriestype = :scatter, color = "blue", label = "generator contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box)  
+plot!(minimum(qg_cont):0.001:maximum(qg_cont), minimum(qg_cont):0.001:maximum(qg_cont), label=false)
+
+plot(vm_diff, seriestype = :scatter, color = "blue", label = "generator contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box)  
+plot!(minimum(vm_cont):0.001:maximum(vm_cont), minimum(vm_cont):0.001:maximum(vm_cont), label=false)
+plot!(0.9:0.001:1.12, 0.9:0.001:1.12, label=false)
+
+plot(va_diff, seriestype = :scatter, color = "blue", label = "generator contingencies", grid = false, gridalpha = 0.5, gridstyle = :dash, fg_color_grid = "black", fg_color_minorgrid = "black", framestyle = :box)  

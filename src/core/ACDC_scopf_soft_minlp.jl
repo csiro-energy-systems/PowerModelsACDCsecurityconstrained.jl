@@ -196,24 +196,6 @@ function build_scopf_soft_minlp(pm::_PM.AbstractPowerModel)
     objective_min_fuel_cost_scopf_soft(pm)
 
     
-    ##### Setup Objective #####
-    # _PMSC.objective_c1_variable_pg_cost_basecase(pm)
-    # # explicit network id needed because of conductor-less
-    # pg_cost = _PMSC.var(pm, 0, :pg_cost)
-
-    # JuMP.@objective(pm.model, Min,
-    #     sum( pg_cost[i] for (i, gen) in _PMSC.ref(pm, 0, :gen) ) +
-    #     sum(
-    #         sum( 5e5*_PM.var(pm, n, :bf_vio_fr, i) for i in _PM.ids(pm, n, :branch) ) +
-    #         sum( 5e5*_PM.var(pm, n, :bf_vio_to, i) for i in _PM.ids(pm, n, :branch) ) + 
-    #         sum( 5e5*_PM.var(pm, n, :bdcf_vio_fr, i) for i in _PM.ids(pm, n, :branchdc) ) +
-    #         sum( 5e5*_PM.var(pm, n, :bdcf_vio_to, i) for i in _PM.ids(pm, n, :branchdc) ) +
-    #         sum( 5e5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-    #         sum( 5e5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :bus)) ) +
-    #         sum( 5e5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in 1:length(_PM.ref(pm, n, :busdc)) )
-    #         for (n, nw_ref) in _PM.nws(pm) )
-    # )
-    
 end
 
 

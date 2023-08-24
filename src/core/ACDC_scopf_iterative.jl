@@ -2,7 +2,7 @@
 Solves an SCOPF problem for integrated HVAC and HVDC grid by iteratively checking for
 violated contingencies and resolving until a fixed-point is reached.
 
-"""
+""" 
 function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type::Type, run_scopf_prob::Function, check_contingency_violation::Function, optimizer, setting; max_iter::Int=100, time_limit::Float64=Inf)   
     if _IM.ismultinetwork(network)
         Memento.error(_LOGGER, "run_ACDC_scopf_contigency_cuts can only be used on single networks")
@@ -46,21 +46,21 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     # update dc part
     for (i,conv) in network_base["convdc"]
         conv["P_g"] = -solution["convdc"][i]["pgrid"]
-        conv["Q_g"] = solution["convdc"][i]["qgrid"]
+        conv["Q_g"] = -solution["convdc"][i]["qgrid"]
         if conv["type_dc"] == 2
-            conv["type_dc"] == 2
+            conv["type_dc"] = 2
         else
-            conv["type_dc"] == 1
+            conv["type_dc"] = 1
         end
         # conv["Pdcset"] = solution["convdc"][i]["pdc"]
     end
     for (i,conv) in network_active["convdc"]
         conv["P_g"] = -solution["convdc"][i]["pgrid"]
-        conv["Q_g"] = solution["convdc"][i]["qgrid"]
+        conv["Q_g"] = -solution["convdc"][i]["qgrid"]
         if conv["type_dc"] == 2
-            conv["type_dc"] == 2
+            conv["type_dc"] = 2
         else
-            conv["type_dc"] == 1
+            conv["type_dc"] = 1
         end
         # conv["Pdcset"] = solution["convdc"][i]["pdc"]
     end
@@ -75,6 +75,11 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     #     end
     # end
     
+
+
+    # TO DO
+
+
     for (i, branch) in network_base["branch"]
         if haskey(solution["branch"], i)
             branch["tap"] = solution["branch"][i]["tm"]
@@ -203,21 +208,21 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             # update dc part
             for (i,conv) in network_base["convdc"]
                 conv["P_g"] = -solution["convdc"][i]["pgrid"]
-                conv["Q_g"] = solution["convdc"][i]["qgrid"]
+                conv["Q_g"] = -solution["convdc"][i]["qgrid"]
                 if conv["type_dc"] == 2
-                    conv["type_dc"] == 2
+                    conv["type_dc"] = 2
                 else
-                    conv["type_dc"] == 1
+                    conv["type_dc"] = 1
                 end
                 # conv["Pdcset"] = solution["convdc"][i]["pdc"]
             end
             for (i,conv) in network_active["convdc"]
                 conv["P_g"] = -solution["convdc"][i]["pgrid"]
-                conv["Q_g"] = solution["convdc"][i]["qgrid"]
+                conv["Q_g"] = -solution["convdc"][i]["qgrid"]
                 if conv["type_dc"] == 2
-                    conv["type_dc"] == 2
+                    conv["type_dc"] = 2
                 else
-                    conv["type_dc"] == 1
+                    conv["type_dc"] = 1
                 end
                 # conv["Pdcset"] = solution["convdc"][i]["pdc"]
             end

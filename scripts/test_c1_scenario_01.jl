@@ -1,6 +1,6 @@
 #Pkg.develop(PackageSpec(path = "/Users/moh050/OneDrive - CSIRO/Documents/GitHub/ChargingStationOpt"))
-using Pkg
-Pkg.activate("./scripts")
+# using Pkg
+# Pkg.activate("./scripts")
 
 using Ipopt
 using Cbc

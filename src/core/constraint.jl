@@ -18,6 +18,21 @@ function constraint_power_balance_ac_shunt_dispatch_soft(pm::_PM.AbstractACPMode
     JuMP.@NLconstraint(pm.model, pb_ac_pos_vio - pb_ac_neg_vio  + sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens)   - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
     JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2 + sum(bs_var[s] for s in bus_shunts_var)*vm^2)
 end
+
+function constraint_power_balance_ac_shunt_dispatch(pm::_PM.AbstractACPModel, n::Int,i::Int, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts, bus_shunts_var, pd, qd, gs, bs)
+    vm = _PM.var(pm, n,  :vm, i)
+    p = _PM.var(pm, n,  :p)
+    q = _PM.var(pm, n,  :q)
+    pg = _PM.var(pm, n,  :pg)
+    qg = _PM.var(pm, n,  :qg)
+    pconv_grid_ac = _PM.var(pm, n,  :pconv_tf_fr)
+    qconv_grid_ac = _PM.var(pm, n,  :qconv_tf_fr)
+
+    bs_var = get(_PM.var(pm, n), :bs, Dict()); #_PM._check_var_keys(bs, bus_shunts_var, "reactive power", "shunt")
+
+    JuMP.@NLconstraint(pm.model, sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens)   - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
+    JuMP.@NLconstraint(pm.model, sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2 + sum(bs_var[s] for s in bus_shunts_var)*vm^2)
+end
     
 
 
@@ -783,10 +798,13 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.Ab
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
     # p_dc_fr = _PM.var(pm, n, :p_dcgrid, f_idx)
-    p_fr = _PM.var(pm, n, :p, fr_idx)
-    
-    
-    JuMP.@constraint(pm.model, sum(p_fr[fr_idx[branch_id]] - sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+
+    # p_fr = _PM.var(pm, n, :p, fr_idx)
+
+    p_fr = _PM.var(pm, n, :branch_p_fr)
+
+    # JuMP.@constraint(pm.model, sum(p_fr[fr_idx[branch_id]] - sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+    JuMP.@constraint(pm.model, sum(p_fr[branch_id] - sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
    
     #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
     #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
@@ -812,10 +830,14 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.Abst
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
     # p_dc_to = _PM.var(pm, n, :p_dcgrid, t_idx)
-    p_to = _PM.var(pm, n, :p, to_idx)
+
+    # p_to = _PM.var(pm, n, :p, to_idx)
+
+    p_to = _PM.var(pm, n, :branch_p_to)
     
-    
-    JuMP.@constraint(pm.model, -sum(p_to[to_idx[branch_id]] + sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+    JuMP.@constraint(pm.model, -sum(p_to[branch_id] + sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+   
+    # JuMP.@constraint(pm.model, -sum(p_to[to_idx[branch_id]] + sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
    
     #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * _PM.var(pm, n, :p_dcgrid, to_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc)   <= rate)
     #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)

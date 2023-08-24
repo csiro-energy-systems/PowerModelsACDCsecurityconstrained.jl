@@ -1,5 +1,4 @@
-using Pkg
-Pkg.activate("./scripts")
+
 
 using Ipopt
 using Cbc

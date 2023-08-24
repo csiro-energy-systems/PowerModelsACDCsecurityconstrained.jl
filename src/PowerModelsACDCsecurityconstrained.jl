@@ -8,6 +8,7 @@ module PowerModelsACDCsecurityconstrained
     import Memento
     import LinearAlgebra
     import InfrastructureModels
+    import Distributed
     # import PolyChaos
     # import KernelDensity
     
@@ -20,6 +21,7 @@ module PowerModelsACDCsecurityconstrained
     const _LA = LinearAlgebra
     # const _PCE = PolyChaos
     # const _KDE = KernelDensity
+    const _DI = Distributed
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
@@ -39,7 +41,7 @@ module PowerModelsACDCsecurityconstrained
     include("core/ACDC_scopf_soft_minlp.jl")
 
   
-    include("core/contingency_filters.jl")
+    include("core/contingency_filter_ndc.jl")
     include("core/conting_c.jl")
     include("core/CalVio.jl")
 
@@ -49,9 +51,9 @@ module PowerModelsACDCsecurityconstrained
     include("core/build_ACDC_scopf_multinetwork.jl")
     
     include("core/ACDC_pf.jl")                  # TODO Is needed ?
-    include("core/conting_soft_v.jl")
-    include("core/ACDC_scopf_ptdf_dcdf_cuts.jl")
-    include("core/ACDC_scopf_ptdf_dcdf_cuts_iterative.jl")
+    include("core/contingency_filter_cuts.jl")
+    include("core/ACDC_scopf_cuts.jl")
+    include("core/ACDC_scopf_cuts_iterative.jl")
     #include("core/ACDC_R_pf.jl")
     #include("core/ACDC_R_cv.jl")
     
@@ -72,5 +74,10 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/re_dispatch_algo.jl") 
     include("core/contingency_filter_SI.jl")
+
+    include("core/expression_template.jl")
+
+    include("core/ndc_filter.jl")
+   
 
 end # module

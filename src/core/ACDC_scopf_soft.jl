@@ -28,7 +28,7 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
     _PMACDC.variable_active_dcbranch_flow(pm, nw=0)       
     _PMACDC.variable_dcbranch_current(pm, nw=0)           
-    variable_dc_converter_n(pm, nw=0)               
+    variable_dc_converter_soft(pm, nw=0)               
     _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=0)   
 
         
@@ -98,7 +98,7 @@ function build_scopf_soft(pm::_PM.AbstractPowerModel)
 
         _PMACDC.variable_active_dcbranch_flow(pm, nw=nw, bounded=false)       
         _PMACDC.variable_dcbranch_current(pm, nw=nw)           
-        variable_dc_converter_n(pm, nw=nw)               
+        variable_dc_converter_soft(pm, nw=nw)               
         _PMACDC.variable_dcgrid_voltage_magnitude(pm, nw=nw)
         # variable_c1_voltage_response(pm, nw=nw)   
 

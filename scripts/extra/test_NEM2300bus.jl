@@ -1,145 +1,632 @@
-using Pkg
-Pkg.activate("./scripts")
+# using Pkg
+#Pkg.activate("./scripts")
 
-using Ipopt
-using Cbc
-using JuMP
-using PowerModels
-using PowerModelsACDC
-using PowerModelsSecurityConstrained
-using PowerModelsACDCsecurityconstrained
+using Distributed
 
+max_node_processes = 32
 
+node_processes = min(Sys.CPU_THREADS - 2, max_node_processes)
 
-nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "tol"=>1e-6)  
-lp_solver = optimizer_with_attributes(Cbc.Optimizer, "logLevel"=>0)
+if Distributed.nprocs() >= 2
+    return
+end
+Distributed.addprocs(node_processes, topology=:master_worker)
 
+@everywhere begin
 
-file = "./data/nem_2300bus.m"
-network = parse_file(file)
-
-network["dcline"]=Dict{String, Any}()
-
-# Adding monopolar VIC_to_TAS HVDC Basslink with metallic return (modelled as bipolar(network["dcpol"] = 2)) & LCC converters "islcc" => 1
-
-network["dcpol"] = 2
-Basslink_Vic_bus_number = 2113              # "name" => "bus_5001" 
-Basslink_Tas_bus_number = 2271              # "name" => "bus_5171"
-Basslink_Vic_gen_id = 264                   # gen_5001_1 on bus_5001 has to be removed and its type has to change from 2 to 1
-Basslink_Tas_gen_id = 265                   # gen_5171_1 on bus_5171 has to be removed and its type has to change from 2 to 1
-
-delete!(network["gen"], "$Basslink_Vic_gen_id")
-delete!(network["gen"], "$Basslink_Tas_gen_id")
-network["bus"]["$Basslink_Vic_bus_number"]["bus_type"]  = 1
-network["bus"]["$Basslink_Tas_bus_number"]["bus_type"]  = 1
-
-network["busdc"]=Dict{String, Any}()
-network["busdc"]["1"]=Dict("basekVdc" => 400, "source_id" => Any["busdc", 1], "Vdc" => 1.02937, "busdc_i" => 1, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 1, "Pdc" => 0)
-network["busdc"]["2"]=Dict("basekVdc" => 400, "source_id" => Any["busdc", 2], "Vdc" => 1, "busdc_i" => 2, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 2, "Pdc" => 0)
-
-network["branchdc"]=Dict{String, Any}()
-network["branchdc"]["1"]=Dict{String, Any}()
-network["branchdc"]["1"]=Dict("c" => 0, "r" => 0.00, "status" => 1, "rateB" => 500, "fbusdc" => 1, "source_id" => Any["branchdc", 1, 2, "Basslink" ], "rateA" => 500, "l" => 0, "index" => 1, "rateC" => 500, "tbusdc" => 2)     # dynamic 630MW
-
-network["convdc"]=Dict{String, Any}()
-network["convdc"]["1"]=Dict("dVdcset" => 0, "Vtar" => 1.02937, "Pacmax" => 500, "filter" => 1, "reactor" => 1, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 12.5, "status" => 1, "Pdcset" => -410, "islcc" => 1, "LossA" => 0.0, "Qacmin" => 0, "rc" => 0.01, "source_id" => Any["convdc_Basslink_VIC_to_TAS", 1], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 1, "busac_i" => Basslink_Vic_bus_number, "tm" => 1, "type_dc" => 2, "Q_g" => -233, "LossB" => 0.0, "basekVac" => 500, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -500, "Qacmax" => 250, "index" => 1, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -410, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # VIC to TAS 478MW       type_dc = 1/2/3 -> fix/slack/droop                                              
-network["convdc"]["2"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 500, "filter" => 1, "reactor" => 1, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 12.5, "status" => 1, "Pdcset" => 410, "islcc" => 1, "LossA" => 0.0, "Qacmin" => 0, "rc" => 0.01, "source_id" => Any["convdc_Basslink_TAS_to_VIC", 2], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 2, "busac_i" => Basslink_Tas_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 233, "LossB" => 0.0, "basekVac" => 220, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -500, "Qacmax" => 250, "index" => 2, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 410, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                      # VIC to TAS 594MW  
+    using Ipopt
+    using Cbc
+    using JuMP
+    using PowerModels
+    using PowerModelsACDC
+    using PowerModelsSecurityConstrained
+    using PowerModelsACDCsecurityconstrained
+    using InfrastructureModels
+    using Memento
+    using ProgressMeter
 
 
-# Adding bipolar VIC_to_SA HVDC Murraylink & VSC converters Ref: page - 136, Chapter 7. https://doi.org/10.26190/unsworks/24018
 
-Murraylink_Vic_bus_number = 765               # "name" => "bus_2355"(986)      # TODO bus_2355 is isolated and 165kV instead of 220kV            !Explore bus_2129 (765)
-Murraylink_Sa_bus_number = 1800               # "name" => "bus_4185"
-Murraylink_Vic_gen_id = 222                   # gen_2355_1 on bus_986 has to be removed and its type has to change from 2 to 1
-Murraylink_Sa_xf_id = 2389                    # xf_2355_to_4185_1 has to be removed
+    # using PowerPlots
+    # using VegaLite
 
-#delete!(network["gen"], "$Murraylink_Vic_gen_id")
-#delete!(network["branch"], "$Murraylink_Sa_xf_id")
-#network["bus"]["$Murraylink_Vic_bus_number"]["bus_type"]  = 1
 
-#network["busdc"]["3"]=Dict{String, Any}()
-#network["busdc"]["4"]=Dict{String, Any}()
 
-#network["busdc"]["3"]=Dict("basekVdc" => 150, "source_id" => Any["busdc", 3], "Vdc" => 1, "busdc_i" => 3, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 3, "Pdc" => 0)
-#network["busdc"]["4"]=Dict("basekVdc" => 150, "source_id" => Any["busdc", 4], "Vdc" => 1, "busdc_i" => 4, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 4, "Pdc" => 0)
+    nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0)  
+    lp_solver = optimizer_with_attributes(Cbc.Optimizer)
 
-#network["branchdc"]["2"]=Dict{String, Any}()
-#network["branchdc"]["2"]=Dict("c" => 0, "r" => 0.0052, "status" => 1, "rateB" => 220, "fbusdc" => 3, "source_id" => Any["branchdc", 3, 4, "Murraylink" ], "rateA" => 220, "l" => 0, "index" => 2, "rateC" => 220, "tbusdc" => 4)    
 
-#network["convdc"]["3"]=Dict{String, Any}()
-#network["convdc"]["4"]=Dict{String, Any}()
-#network["convdc"]["3"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 220, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 10, "status" => 1, "Pdcset" => -91, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc_Murraylink_VIC_to_SA", 3], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 3, "busac_i" => Murraylink_Vic_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 220, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -220, "Qacmax" => 100, "index" => 3, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -91, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # VIC to SA 220MW      TODO inverter -100 +100 MVAr rectifier -75 +125                                              
-#network["convdc"]["4"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 220, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 10, "status" => 1, "Pdcset" => 91, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -100, "rc" => 0.01, "source_id" => Any["convdc_Murraylink_SA_to_VIC", 4], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 4, "busac_i" => Murraylink_Sa_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 132, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -220, "Qacmax" => 100, "index" => 4, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 91, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # SA to VIC 200MW      TODO inverter -100 +100 MVAr rectifier -75 +125                                              
+    const _PM = PowerModels
+    const _PMSC = PowerModelsSecurityConstrained
+    const _PMACDC = PowerModelsACDC
+    const __PMSCACDC = PowerModelsACDCsecurityconstrained
+    const _DI = Distributed
+    const _IM = InfrastructureModels
+    const _LOGGER = Memento.getlogger(@__MODULE__)
 
-# Adding bipolar NSW_to_QL HVDC Directlink that extends 110kV(2) AC Terranora interconnector [branch 277, 278] & VSC converters
+    ## Include some helper functions
+    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/scripts/extra/SNEM2000.jl")
+    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/scripts/extra/distributed.jl")
+    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/core/ndc_filter.jl")
+    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/core/CalVio.jl")
+    
 
-Directlink_Ql_bus_number = 211                # "name" => "bus_1218"        # Connecting to NSW through Directlink
-Directlink_Nsw_bus_number = 418               # "name" => "bus_1426"        # TODO bus_1426 is nearest 132kV in NSW well connected
-Directlink_Nsw_gen_id = 206                   # gen_1218_1 on bus_211 has to be removed and its type has to change from 2 to 1
 
-#delete!(network["gen"], "$Directlink_Nsw_gen_id")
-#network["bus"]["$Directlink_Ql_bus_number"]["bus_type"]  = 1
+end
 
-#network["busdc"]["5"]=Dict{String, Any}()
-#network["busdc"]["6"]=Dict{String, Any}()
+## 
+""" Read the bus data from UNSW-NEMData """
+# file = "./data/nem_2300bus_thermal_limits_gen_costs_hvdc.m"
+file = "./data/nem_2300bus_thermal_limits_gen_costs_hvdc.m"
+data = _PM.parse_file(file)
 
-#network["busdc"]["5"]=Dict("basekVdc" => 80, "source_id" => Any["busdc", 5], "Vdc" => 1, "busdc_i" => 5, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 5, "Pdc" => 0)
-#network["busdc"]["6"]=Dict("basekVdc" => 80, "source_id" => Any["busdc", 6], "Vdc" => 1, "busdc_i" => 6, "Cdc" => 0, "grid" => 1, "Vdcmax" => 1.1, "Vdcmin" => 0.9, "index" => 6, "Pdc" => 0)
 
-#network["branchdc"]["3"]=Dict{String, Any}()
-#network["branchdc"]["4"]=Dict{String, Any}()
-#network["branchdc"]["5"]=Dict{String, Any}()
-#network["branchdc"]["3"]=Dict("c" => 0, "r" => 0.052, "status" => 1, "rateB" => 60, "fbusdc" => 5, "source_id" => Any["branchdc", 5, 6, "Directlink" ], "rateA" => 60, "l" => 0, "index" => 3, "rateC" => 60, "tbusdc" => 6)    
-#network["branchdc"]["4"]=Dict("c" => 0, "r" => 0.052, "status" => 1, "rateB" => 60, "fbusdc" => 5, "source_id" => Any["branchdc", 5, 6, "Directlink" ], "rateA" => 60, "l" => 0, "index" => 4, "rateC" => 60, "tbusdc" => 6)    
-#network["branchdc"]["5"]=Dict("c" => 0, "r" => 0.052, "status" => 1, "rateB" => 60, "fbusdc" => 5, "source_id" => Any["branchdc", 5, 6, "Directlink" ], "rateA" => 60, "l" => 0, "index" => 5, "rateC" => 60, "tbusdc" => 6)    
+##
+# This to empty the existing contingencies in the data
 
-#network["convdc"]["5"]=Dict{String, Any}()
-#network["convdc"]["6"]=Dict{String, Any}()
-#network["convdc"]["7"]=Dict{String, Any}()
-#network["convdc"]["8"]=Dict{String, Any}()
-#network["convdc"]["9"]=Dict{String, Any}()
-#network["convdc"]["10"]=Dict{String, Any}()
-#network["convdc"]["5"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_QL_to_NSW", 5], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 5, "busac_i" => Directlink_Ql_bus_number, "tm" => 1, "type_dc" => 2, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 110, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 5, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -15, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # QL to NSW 210MW                                              
-#network["convdc"]["6"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_QL_to_NSW", 6], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 5, "busac_i" => Directlink_Ql_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 110, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 6, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -25, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # QL to NSW 210MW  
-#network["convdc"]["7"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_QL_to_NSW", 7], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 5, "busac_i" => Directlink_Ql_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 110, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 7, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => -25, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # QL to NSW 210MW  
+data["dcline"] = Dict{String, Any}()
+# data["branchdc_contingencies"] = []
+data["branchdc_contingencies"] = Vector{Any}(undef, 1)
+data["branchdc_contingencies"][1] = (idx = 1, label = "line_1005_to_1508_1_dc_BASSLINK", type = "branchdc")
 
-#network["convdc"]["8"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_NSW_to_QL", 8], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 6, "busac_i" => Directlink_Nsw_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 132, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 8, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 15, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # NSW to QL 107MW 
-#network["convdc"]["9"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_NSW_to_QL", 9], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 6, "busac_i" => Directlink_Nsw_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 132, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 9, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 25, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # NSW to QL 107MW 
-#network["convdc"]["10"]=Dict("dVdcset" => 0, "Vtar" => 1, "Pacmax" => 60, "filter" => 0, "reactor" => 0, "Vdcset" => 1.0, "Vmmax" => 1.1, "xtf" => 0.01, "Imax" => 3.42, "status" => 1, "Pdcset" => 0.0, "islcc" => 0, "LossA" => 0.0, "Qacmin" => -30, "rc" => 0.01, "source_id" => Any["convdc_Directlink_NSW_to_QL", 10], "rtf" => 0.01, "xc" => 0.01, "busdc_i" => 6, "busac_i" => Directlink_Nsw_bus_number, "tm" => 1, "type_dc" => 1, "Q_g" => 0, "LossB" => 0.0, "basekVac" => 132, "LossCrec" => 0.0, "droop" => 0.005, "Pacmin" => -60, "Qacmax" => 30, "index" => 10, "type_ac" => 1, "Vmmin" => 0.9, "P_g" => 25, "transformer" => 1, "bf" => 0.01, "LossCinv" => 0.0)                    # NSW to QL 107MW 
+data["convdc_contingencies"] = []
 
-# Adding generator, branch and branchdc contingencies
+# data["branch_contingencies"] = [(idx = branch["index"], label = branch["name"], type = "branch") for (i, branch) in data["branch"]]
 
-network["branchdc_contingencies"]=Vector{Any}(undef, 1)
-#network["branchdc_contingencies"][1]=(idx = 1, label = "LINE-1-2-R", type = "branchdc")
+# data["branch_contingencies"] = []
 
-network["branch_contingencies"]=Vector{Any}(undef, 1)
-#network["branch_contingencies"][1]=(idx = 7, label = "LINE-4-5-BL", type = "branch")
+add_branch_contingencies!(data)
 
-network["gen_contingencies"]=Vector{Any}(undef, 1)
-#network["gen_contingencies"][1]=(idx = 3, label = "GEN-3-1", type = "gen")
 
- [gen["model"] = 1 for (i, gen) in network["gen"]]
- [gen["ncost"] = 2 for (i, gen) in network["gen"]]
- [gen["cost"] = [1000, 10, 1, 0] for (i, gen) in network["gen"]]
-#for i in network["gen"]
-    #network["gen"][i]["model"] = 1
-    #network["gen"]["$i"]["pg"] = 0
-    #network["gen"]["$i"]["qg"] = 0
-    #network["gen"]["$i"]["pmin"] = 0
-    #network["gen"]["$i"]["qmin"] = -network["gen"]["$i"]["qmax"]
-    #network["gen"][i]["ncost"] = 2
-    #network["gen"][i]["cost"] = [1000, 10, 1, 0]     #[0.114610934721, 148.906997825, 0.224657803731, 203.163028589, 0.33470467274, 257.869865285, 0.44475154175, 313.027507911, 0.5547984107589999, 368.635956469, 0.664845279769, 424.695210957, 0.774892148778, 481.205271377, 0.884939017788, 538.166137728, 0.9949858867970001, 595.57781001, 1.10503275581, 653.440288223]
-    #network["gen"]["$i"]["alpha"] = 1
-#end
+data["branch_infeasible_contingencies"] = []
+data["branch_contingencies_unsolvable"] = []
 
-network["bus"]["2136"]["bus_type"] = 2
+# data["branch_contingencies"] = data["branch_contingencies"][1:50]
 
-PowerModelsACDC.process_additional_data!(network)
+
+# data["gen_contingencies"] = []
+
+add_gen_contingencies!(data)
+
+# data["gen_contingencies"] = data["gen_contingencies"][1:50]
+
+
+# data["gen_contingencies"]=Vector{Any}(undef, 1)
+# data["gen_contingencies"][1]=(idx = 10, label = "gen_1019_3", type = "gen")
+# data["gen_contingencies"][2]=(idx = 15, label = "gen_1034_1", type = "gen")
+# data["gen_contingencies"][3]=(idx = 25, label = "gen_1058_1", type = "gen")
+
+set1 = Set{Int64}()
+set2 = Set{Int64}()
+set3 = Set{Int64}()
+set4 = Set{Int64}()
+set5 = Set{Int64}()
+
+for i = 1:length(data["gen"])
+    gen_bus = data["gen"]["$i"]["gen_bus"]
+    if data["bus"]["$gen_bus"]["area"] == 1
+        push!(set1, data["gen"]["$i"]["index"])
+    elseif data["bus"]["$gen_bus"]["area"] == 2
+        push!(set2, data["gen"]["$i"]["index"])
+    elseif data["bus"]["$gen_bus"]["area"] == 3
+        push!(set3, data["gen"]["$i"]["index"])
+    elseif data["bus"]["$gen_bus"]["area"] == 4
+        push!(set4, data["gen"]["$i"]["index"])
+    elseif data["bus"]["$gen_bus"]["area"] == 5
+        push!(set5, data["gen"]["$i"]["index"])
+    end
+end
+
+data["area_gens"] = Dict{Int64, Set{Int64}}()
+data["area_gens"][1] = set1
+data["area_gens"][2] = set2
+data["area_gens"][3] = set3
+data["area_gens"][4] = set4
+data["area_gens"][5] = set5
+
+gen_total1 = sum(data["gen"]["$i"]["pmax"] for i in collect(set1))
+gen_total2 = sum(data["gen"]["$i"]["pmax"] for i in collect(set2))
+gen_total3 = sum(data["gen"]["$i"]["pmax"] for i in collect(set3))
+gen_total4 = sum(data["gen"]["$i"]["pmax"] for i in collect(set4))
+gen_total5 = sum(data["gen"]["$i"]["pmax"] for i in collect(set5))
+
+for i in collect(set1)
+    data["gen"]["$i"]["alpha"] = gen_total1/data["gen"]["$i"]["pmax"]  
+end
+
+for i in collect(set2)
+    data["gen"]["$i"]["alpha"] = gen_total2/data["gen"]["$i"]["pmax"]  
+end
+
+for i in collect(set3)
+    data["gen"]["$i"]["alpha"] = gen_total3/data["gen"]["$i"]["pmax"]  
+end
+
+for i in collect(set4)
+    data["gen"]["$i"]["alpha"] = gen_total4/data["gen"]["$i"]["pmax"]  
+end
+
+for i in collect(set5)
+    data["gen"]["$i"]["alpha"] = gen_total5/data["gen"]["$i"]["pmax"]  
+end
+
+data["contingencies"] = [] 
+
+for i=1:length(data["branch"])
+    data["branch"]["$i"]["rate_a"] = 1.3 * data["branch"]["$i"]["rate_a"]
+    data["branch"]["$i"]["rate_b"] = 1.3 * data["branch"]["$i"]["rate_b"]
+    data["branch"]["$i"]["rate_c"] = 1.3 * data["branch"]["$i"]["rate_c"]
+    if data["branch"]["$i"]["tap"] !== 1 
+        data["branch"]["$i"]["tm_min"] = 0.9
+        data["branch"]["$i"]["tm_max"] = 1.1
+    end
+    if data["branch"]["$i"]["tap"] == 1 
+        data["branch"]["$i"]["tm_min"] = 1
+        data["branch"]["$i"]["tm_max"] = 1
+    end
+    if data["branch"]["$i"]["shift"] !== 0
+        data["branch"]["$i"]["ta_min"] = -15
+        data["branch"]["$i"]["ta_max"] = 15
+    end
+    if data["branch"]["$i"]["shift"] == 0
+        data["branch"]["$i"]["ta_min"] = 0
+        data["branch"]["$i"]["ta_max"] = 0
+    end
+end
+
+for (i, branch) in data["branch"]
+    if branch["br_x"] == 0
+        branch["br_x"] = 1E-3
+    end
+end
+
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["ep"] = 1e-1
+    if data["gen"]["$i"]["ncost"] == 0
+        data["gen"]["$i"]["ncost"] = 2 
+        push!(data["gen"]["$i"]["cost"], 0)
+        push!(data["gen"]["$i"]["cost"], 0)
+        push!(data["gen"]["$i"]["cost"], 0)
+        push!(data["gen"]["$i"]["cost"], 0)
+    end
+    if data["gen"]["$i"]["ncost"] == 2 && length(data["gen"]["$i"]["cost"]) == 2
+        push!(data["gen"]["$i"]["cost"], 0)
+        push!(data["gen"]["$i"]["cost"], 0)
+    end
+end
+
+for i=1:length(data["convdc"])
+    data["convdc"]["$i"]["ep"] = 1e-1
+    data["convdc"]["$i"]["Vdclow"] = 0.98
+    data["convdc"]["$i"]["Vdchigh"] = 1.02
+end
+
+bus_dict = Dict{Int,Int}([(parse(Int, bus_id), i) for (i, bus_id) in enumerate(keys(data["bus"]))])
+
+Bus = Dict{String, Any}()
+for (id, bus) in data["bus"]
+    new_id = bus_dict[parse(Int, id)]
+    Bus["$new_id"] = deepcopy(bus)
+    Bus["$new_id"]["index"] = new_id
+end
+data["bus"] = deepcopy(Bus)
+
+for (k, branch) in data["branch"]
+    branch["f_bus"] = bus_dict[branch["f_bus"]]
+    branch["t_bus"] = bus_dict[branch["t_bus"]]
+end
+# gen_pair = []
+# for (l,gen) in data["gen"]
+#     for (k,genr) in data["gen"]
+#         if gen["gen_bus"] == genr["gen_bus"] && l != k
+#             push!(gen_pair, (l,k))
+#         end
+#     end
+# end
+for (l, gen) in data["gen"]
+    # if l ∉ gen_pair
+        gen["gen_bus"] = bus_dict[gen["gen_bus"]]
+    # end
+end
+# for (i,j) in gen_pairs
+#     data["gen"]["$i"]["gen_bus"] = data["gen"]["$j"]["gen_bus"] = bus_dict[data["gen"]["$i"]["gen_bus"]]
+# end
+
+for (o,load) in data["load"]
+    load["load_bus"] = bus_dict[load["load_bus"]]
+end
+for (n, shunt) in data["shunt"]
+    shunt["shunt_bus"] = bus_dict[shunt["shunt_bus"]]
+end
+for (m, convdc) in data["convdc"]
+    convdc["busac_i"] = bus_dict[convdc["busac_i"]]
+end
+
+# for (i, bus) in data["bus"]
+#     if bus["name"] == "bus_2202"
+#         println("bus 838 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_5150"
+#         println("bus 2250 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_1218"
+#         println("bus 211 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_1651"
+#         println("bus 636 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_2355"
+#         println("bus 986 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_4185"
+#         println("bus 1800 ........ $(bus["index"])")
+#     end
+# end
+# for (i, bus) in data["bus"]
+#     if bus["name"] == "bus_1002"
+#         println("bus 3 ........ $(bus["index"])")
+#     elseif bus["name"] == "bus_5033"
+#         println("bus 2136 ........ $(bus["index"])")
+#     end
+# end
+
+data["convdc"]["1"]["busac_i"] = 1005
+data["convdc"]["2"]["busac_i"] = 1508
+data["convdc"]["3"]["busac_i"] = 877
+data["convdc"]["4"]["busac_i"] = 182
+data["convdc"]["5"]["busac_i"] = 1920
+data["convdc"]["6"]["busac_i"] = 316
+
+##
+# result = _PMSC.run_c1_scopf_contigency_cuts(data, DCPPowerModel, lp_solver)
+# result = _PMSC.run_c1_scopf_contigency_cuts(data, ACPPowerModel, opadtimizer)
+
+
+split_large_coal_powerplants_to_units!(data)
+
+for (i, gen) in data["gen"]
+    if gen["fuel"] == "CapBank/SVC/StatCom/SynCon"
+        gen["pmax"] = 0
+    end
+end
+ 
+
+_PMACDC.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
-resultsACDC = PowerModelsACDC.run_acdcopf(network, PowerModels.ACPPowerModel, nlp_solver; setting = setting)
 
-#resultACDCSCOPF2=PowerModelsACDCsecurityconstrained.run_ACDC_scopf_contigency_cuts(network, PowerModels.ACPPowerModel, PowerModelsACDCsecurityconstrained.run_scopf, nlp_solver, setting)
 
+######## trial distributed
+
+
+result = _PMACDC.run_acdcopf(data, _PM.ACPPowerModel, nlp_solver)
+
+_PM.update_data!(data, result["solution"])
+for (i,conv) in data["convdc"]
+    conv["P_g"] = -result["solution"]["convdc"][i]["pgrid"]
+    conv["Q_g"] = result["solution"]["convdc"][i]["qgrid"]
+    if conv["type_dc"] == 2
+        conv["type_dc"] == 2
+    else
+        conv["type_dc"] == 1
+    end
+    # conv["Pdcset"] = solution["convdc"][i]["pdc"]
+end
+
+
+
+# _DI.@everywhere include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/PowerModelsACDCsecurityconstrained.jl")
+
+
+    output_dir=""
+    network = data  
+    time_worker_start = time()
+    workers = Distributed.workers()
+    print(workers)
+    # _PMSC.info(_LOGGER, "start warmup on $(length(workers)) workers")
+    worker_futures = []
+    for wid in workers
+        future = _DI.remotecall(load_network_global_new, wid, network)
+        push!(worker_futures, future)
+    end
+
+    # setup for contigency solve
+    gen_cont_total = length(network["gen_contingencies"])
+    branch_cont_total = length(network["branch_contingencies"])
+    cont_total = gen_cont_total + branch_cont_total
+    cont_per_proc = cont_total/length(workers)
+
+    cont_order = contingency_order(network)
+    cont_range = []
+    for p in 1:length(workers)
+        cont_start = trunc(Int, ceil(1+(p-1)*cont_per_proc))
+        cont_end = min(cont_total, trunc(Int,ceil(p*cont_per_proc)))
+        push!(cont_range, cont_start:cont_end,)
+    end
+
+    for (i,rng) in enumerate(cont_range)
+        # _PMSC.info(_LOGGER, "task $(i): $(length(rng)) / $(rng)")
+    end
+    #pmap(filter_c1_network_global_contingencies, cont_range)
+    output_dirs = [output_dir for i in 1:length(workers)]
+
+    # _PMSC.info(_LOGGER, "waiting for worker warmup to complete: $(time())")
+    for future in worker_futures
+        wait(future)
+    end
+
+    time_worker = time() - time_worker_start
+    # _PMSC.info(_LOGGER, "total worker warmup time: $(time_worker)")
+    solution_file = ["solution.txt" for p in 1:length(workers)]
+
+    # network["gen_flow_cuts"] = []
+    # network["branch_flow_cuts"] = []
+
+    # _PMSC.write_c1_active_flow_cuts(network, output_dir=output_dir)
+    
+    print(workers)
+    #cuts = pmap(check_c1_contingencies_branch_power_remote, cont_range, output_dirs, [iteration for p in 1:length(workers)], [true for p in 1:length(workers)], solution_file_apo)
+    
+    iteration  = 1
+    t_calc = @elapsed @showprogress conts = _DI.pmap(check_contingency_violations_distributed_remote, cont_range, output_dirs, [iteration for p in 1:length(workers)], solution_file)
+    # cuts_found = sum(length(c.gen_cuts)+length(c.branch_cuts) for c in cuts)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @time conts = __PMSCACDC.check_contingencies_distributed(data)
+
+filter_ndc_time=@elapsed ndc_contingencies= __PMSCACDC.filter_dominated_contingencies(data, _PM.ACPPowerModel, nlp_solver, setting)
+
+# data["branch"]["10"]["br_status"] = 1
+# resultopf = __PMACDC.run_acdcopf(data, _PM.ACPPowerModel, nlp_solver, setting = setting) 
+
+# data["branchdc"]["1"]["status"] = 1
+
+# data["convdc"]["1"]["P_g"] = -resultopf["solution"]["convdc"]["1"]["pgrid"]
+# data["convdc"]["1"]["Q_g"] = resultopf["solution"]["convdc"]["1"]["qgrid"]
+# data["convdc"]["2"]["P_g"] = -resultopf["solution"]["convdc"]["2"]["pgrid"]
+# data["convdc"]["2"]["Q_g"] = resultopf["solution"]["convdc"]["2"]["qgrid"]
+
+# data["convdc"]["1"]["status"] = 0
+# data["convdc"]["2"]["status"] = 0
+# data["branchdc"]["1"]["status"] = 0
+
+
+# update_data!(data, resultopf["solution"])
+# resultpf = __PMACDC.run_acdcpf(data, _PM.ACPPowerModel, nlp_solver, setting = setting) 
+# result = __PMSCACDC.run_ACDC_scopf_contigency_cuts(data, _PM.ACPPowerModel, __PMSCACDC.run_scopf_soft, __PMSCACDC.check_contingency_violations_SI, nlp_solver, setting)
+
+scopf_solve_time=@elapsed results = __PMSCACDC.run_acdc_scopf_ptdf_dcdf_cuts(data, _PM.ACPPowerModel, __PMSCACDC.run_acdc_scopf_cuts, nlp_solver)
+
+##
+plotdata = deepcopy(data)
+_PM.update_data!(plotdata, results["final"]["solution"])
+plotdata["dcline"] = Dict{String, Any}()
+plotdata["dcline"] = plotdata["branchdc"]
+
+plotdata["dcline"]["1"]["f_bus"] = 1005  
+plotdata["dcline"]["1"]["t_bus"] = 1508
+
+plotdata["dcline"]["2"]["f_bus"] = 877  
+plotdata["dcline"]["2"]["t_bus"] = 182
+
+plotdata["dcline"]["3"]["f_bus"] = 877  
+plotdata["dcline"]["3"]["t_bus"] = 182
+
+plotdata["dcline"]["4"]["f_bus"] = 877  
+plotdata["dcline"]["4"]["t_bus"] = 182
+
+plotdata["dcline"]["5"]["f_bus"] = 1920  
+plotdata["dcline"]["5"]["t_bus"] = 316
+
+
+plot_nem = powerplot(plotdata; gen_color = "red", bus_color="black", branch_color="blue", dcline_color = "green", bus_size=10, gen_size=50, branch_size=1, load_size = 0, dcline_size = 3, show_flow=false, connector_size=1, width=2000, height=2000)
+PowerPlots.Experimental.add_zoom!(plot_nem)
+save("plot_nem2.html", plot_nem)
+
+a = [br["pf"]/data["branch"][i]["rate_a"] for (i, br) in results["final"]["solution"]["branch"] if abs(br["pf"]/data["branch"][i]["rate_a"]) > 1 ]
+a = [br["pf"]/data["branch"][i]["rate_a"] for (i, br) in results["final"]["solution"]["branch"] ]
+
+using Plots
+plot(a)
+
+
+# Checking the feasible contingencies
+function calc_feasible_contingencies(data, nlp_solver, setting)
+    feasible_contingencies = []
+    infeasible_contingencies = []
+    for i = 1:length(data["branch"])
+        if  data["branch"]["$i"]["br_status"] != 0 && i != 140 && i!= 712 && i!= 1313 && i!= 2687
+            data["branch"]["$i"]["br_status"] = 0
+            result_acdcpf = __PMACDC.run_acdcpf(data, _PM.ACPPowerModel, nlp_solver, setting = setting)
+
+            if (result_acdcpf["termination_status"] == _PM.OPTIMAL || result_acdcpf["termination_status"] == _PM.LOCALLY_SOLVED || result_acdcpf["termination_status"] == _PM.ALMOST_LOCALLY_SOLVED)
+                push!(feasible_contingencies, data["branch"]["$i"]["index"])
+            else    
+                push!(infeasible_contingencies, data["branch"]["$i"]["index"])
+            end
+            data["branch"]["$i"]["br_status"] = 1
+            result_acdcpf = nothing
+            if i == 500
+                printstyled("Note that ................ i == ........##......... 500\n"; color = :red)
+            elseif i == 1000
+                printstyled("Note that ................ i == ........##......... 1000\n"; color = :red)
+            elseif i == 1500
+                printstyled("Note that ................ i == ........##......... 1500\n"; color = :red)
+            elseif i == 2000
+                printstyled("Note that ................ i == ........##......... 2000\n"; color = :red)
+            elseif i == 2500
+                printstyled("Note that ................ i == ........##......... 2500\n"; color = :red)
+            elseif i == 3000
+                printstyled("Note that ................ i == ........##......... 3000\n"; color = :red)
+            end
+        end
+    end
+    return feasible_contingencies, infeasible_contingencies
+end
+
+
+    feasible_contingencies, infeasible_contingencies = calc_feasible_contingencies(data, nlp_solver, setting)
+
+
+#change to contingencies
+contingencies = [] 
+for (i, branch) in data["branch"]
+    if branch["index"] in feasible_contingencies
+        push!(contingencies, (idx = branch["index"], label = branch["name"], type = "branch"))
+    end
+end
+for i=1:1000
+    println("data[\"branch_contingencies\"][$i] = $(contingencies[i])")
+end
+
+### checkscopf
+i = 1644
+        # if data["branch"]["$i"]["br_status"] != 0
+            data["branch"]["2687"]["br_status"] = 0
+            data["branch"]["1645"]["br_status"] = 1
+            result_acdcpf = __PMACDC.run_acdcpf(data, _PM.ACPPowerModel, nlp_solver, setting = setting)
+        # end
+
+        for (i, branch) in data["branch"]
+            if branch["f_bus"] == 367 && branch["t_bus"] == 508
+                println("$(branch["index"])")
+            end
+        end
+        
+### check parallel branch
+parallel_branch = []
+for (idx, label, type) in data["branch_contingencies"]
+    for (i, branch) in data["branch"]
+        if branch["f_bus"] == data["branch"]["$idx"]["f_bus"] && branch["t_bus"] == data["branch"]["$idx"]["t_bus"] && "$idx" != i
+            println("Parallel branch .............................. $idx and $i")
+            push!(parallel_branch, parse(Int64, i))
+        end
+    end
+end
+
+#  generating a new set avoiding parallel lines
+contingencies_new = []
+for (idx, label, type) in data["branch_contingencies"]
+    if idx ∉ parallel_branch && idx ∉ rm_branch_conts
+        push!(contingencies_new, (idx = idx, label = "$label", type = "$type"))
+    end
+end
+for i=1001:1295
+    println("data[\"branch_contingencies\"][$i] = $(contingencies_new[i])")
+end
+i=1
+for (idx, label, type) in data["branch_contingencies"]
+    println("data[\"branch_contingencies\"][$i] = (idx = $idx, label = \"$label\", type = \"$type\")")
+    i+=1
+end
+
+# setting up generator contingencies
+i = 1
+for (j, gen) in data["gen"]
+    if gen["fuel"] != "CapBank/SVC/StatCom/SynCon" && gen["pmax"] < 5.0 && gen["index"] <= 265
+        println("data[\"gen_contingencies\"][$i] = (idx = $(gen["index"]), label = \"$(gen["name"])__$(gen["pmax"])MW\", type = \"gen\")")
+        i +=1
+    end
+end
+
+parallel_gen = []
+for (idx, label, type) in data["gen_contingencies"]
+    for (i, bus) in data["bus"]
+        if bus["index"] == data["gen"]["$idx"]["index"] && "$idx" != i
+            push!(parallel_gen, parse(Int64, i))
+        end
+    end
+end
+
+gen_power = 0.0
+j = 1
+for (i,gen) in results["final"]["solution"]["gen"]
+    if gen["pg"] != 0
+        gen_power += gen["pg"]
+        println("gen index = $i, $(data["gen"]["$i"]["fuel"]), $(data["gen"]["$i"]["pmax"]) ................ pg = $(gen["pg"])")
+        j +=1
+    else
+        println("gen index = $i, ................ pg = $(gen["pg"])")
+    end
+end
+
+load_total = 0.0
+for (i, load) in data["load"]
+    load_total += load["pd"]
+end
+
+for (i,gen) in data["gen"]
+   if gen["fuel"] == "Coal" && gen["pmax"] > 5
+        println("gen $i ................................ $(gen["pmax"])")
+   end
+end
+
+for (i, gen) in data["gen"]
+    if gen["fuel"] == "CapBank/SVC/StatCom/SynCon"
+       println("$i ........... $(gen["fuel"])")
+    end 
+end
+   
+for (i, gen) in data["gen"]
+    println("$(gen["gen_bus"])")
+end
+
+for (i, branch) in data["branch"]
+    fbus = branch["f_bus"]
+    tbus = branch["t_bus"]
+    if data["bus"]["$fbus"]["base_kv"] < 66 && data["bus"]["$tbus"]["base_kv"] < 66
+        println("branch $i ............. $fbus ... ($(data["bus"]["$fbus"]["base_kv"])) ............ $tbus ... ($(data["bus"]["$tbus"]["base_kv"]))")
+    end
+end
+
+####
+branch_cont_idx = []
+for (idx, label, type) in data["branch_contingencies"]
+    push!(branch_cont_idx, idx)
+end
+gen_bus = []
+for (i, gen) in data["gen"]
+    push!(gen_bus, gen["gen_bus"])
+end
+gen_cont_idx = []
+for (idx, label, type) in data["gen_contingencies"]
+    push!(gen_cont_idx, idx)
+end
+gen_cont_buses = []
+for (i, gen) in data["gen"]
+    if gen["index"] in gen_cont_idx
+        push!(gen_cont_buses, gen["gen_bus"])
+    end
+end
+branch_bus = []
+for (i, branch) in data["branch"]
+    push!(branch_bus, branch["f_bus"])
+    push!(branch_bus, branch["t_bus"])
+end
+rm_branch_conts = [] 
+for (i, branch) in data["branch"]
+    if branch["index"] in branch_cont_idx
+        if branch["f_bus"] in gen_bus 
+            if branch["f_bus"] in gen_cont_buses 
+                if count(==(branch["f_bus"]), branch_bus) == 1
+                    push!(rm_branch_conts, branch["index"])
+                end
+            end
+        end
+        if branch["t_bus"] in gen_bus
+            if branch["t_bus"] in gen_cont_buses
+                if count(==(branch["t_bus"]), branch_bus) == 1
+                    push!(rm_branch_conts, branch["index"])
+                end
+            end
+        end
+    end
+end
 
 
 

@@ -1,5 +1,4 @@
-using Pkg
-Pkg.activate("./scripts")
+
 
 using Ipopt
 using Cbc
@@ -90,7 +89,7 @@ end
 data["shunt"] = Dict{String, Any}()
 data["shunt"]["1"] = Dict{String, Any}("b2" => 0.0, "n1" => 1, "adjm" => 0, "modsw" => 2, "shunt_bus" => 3, "b8" => 0.0, "status" => 1, "n5" => 0, "vswlo"  => 1.01462, "gs" => 0.0, "n3" => 0, "bs" => 0.0, "n8" => 0, "b7" => 0.0, "source_id" => Any["switched shunt", 129, 0], "n7" => 0, "rmpct" => 100.0, "b3" => 0.0, "bmax" => 0.6, "dispatchable" => true, "bmin" => 0.0, "n2" => 0, "b5" => 0.0, "index"  => 1, "n6" => 0, "rmidnt" => " 123", "b4"  => 0.0, "vswhi" => 1.01462, "b6" => 0.0, "n4" => 0, "b1" => 60.0)
 
-data["salck"] = Dict{String, Any}()
+data["slack"] = Dict{String, Any}()
 data["slack"]["1"] = Dict{String, Any}()
 data["slack"]["1"]["cost"] = [1E-13, 1000, 0.01, 5E5, 0.1, 5E7, 10, 5E15]
 data["slack"]["1"]["ncost"] = 4
@@ -101,6 +100,8 @@ data["slack"]["1"]["ncost"] = 4
 
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
+# results = PM_acdc_sc.run_acdc_scopf_ptdf_dcdf_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_acdc_scopf_cuts, nlp_solver)
+
 # data_SI = deepcopy(data)
 
 data_minlp = deepcopy(data)
@@ -110,8 +111,8 @@ result_ACDC_scopf_soft_ndc = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.
 
 @time result_ACDC_scopf_soft_minlp = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data_minlp, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft_minlp, PM_acdc_sc.check_contingency_violations, minlp_solver, setting)
 
-@time result_ACDC_scopf_re_dispatch_oltc_pst = PM_acdc_sc.run_ACDC_scopf_re_dispatch(data, result_ACDC_scopf_soft_ndc, PM.ACPPowerModel, nlp_solver)    # only suports nlp 
-# #result_ACDC_scopf_re_dispatch_ots_oltc_pst =  PM_acdc_sc.run_acdcreopf_ots_oltc_pst(data2, PM.ACPPowerModel, minlp_solver)
+@time result_ACDC_scopf_re_dispatch_oltc_pst = PM_acdc_sc.run_ACDC_scopf_re_dispatch(data, result_ACDC_scopf_soft_ndc, PM.ACPPowerModel, nlp_solver)    
+
 
 ## visuallization !!!
 
