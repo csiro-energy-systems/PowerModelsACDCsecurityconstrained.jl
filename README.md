@@ -8,7 +8,7 @@ Building upon the PowerModels architecture, the code is engineered to decouple s
 
 
 ```julia
-Pkg.add("PowerModelsACDCsecurityconstrained")
+Download the code and add as a local repository.
 ```
 
 
@@ -17,7 +17,7 @@ Pkg.add("PowerModelsACDCsecurityconstrained")
 
 
 **Core Formulations**
-* Nonlinear nonconvex formulation (NLP). All AC formulations of PowerModels, PowerModelsACDC, and PowerModelsSecurityConstrained are re-used.
+* Nonlinear nonconvex formulation (NLP).
 
 
 Additional Features:

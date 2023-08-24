@@ -7,7 +7,7 @@ participation factor based generator response model from the ARPA-e GOC
 Challenge 1 specification.
 """
 function check_c1_contingencies_branch_power_GM(network, optimizer;
-        gen_flow_cut_limit=15, branch_flow_cut_limit=15, branchdc_flow_cut_limit=15, total_cut_limit=typemax(Int64),
+        gen_flow_cut_limit=10000, branch_flow_cut_limit=10000, branchdc_flow_cut_limit=10000, total_cut_limit=typemax(Int64),
         gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), sm_threshold=0.01,
         gen_flow_cuts=[], branch_flow_cuts=[], branchdc_flow_cuts=[])     # Update_GM
 
@@ -45,38 +45,38 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
 
     network_lal = deepcopy(network) #lal -> losses as loads
 
-    ref_bus_id = _PM.reference_bus(network_lal)["index"]
+    ref_bus_id = network_lal["bus"]["130"]["index"]  #_PM.reference_bus(network_lal)["index"]  3 -> 130, 2136 -> 1124 
 
     gen_pg_init = Dict(i => gen["pg"] for (i,gen) in network_lal["gen"])
 
-    load_active = Dict(i => load for (i,load) in network_lal["load"] if load["status"] != 0)
-    load_dc_active = Dict(i => busdc["Pdc"] for (i,busdc) in network_lal["busdc"])
-    pd_total = sum(load["pd"] for (i,load) in load_active)
-    p_losses = sum(gen["pg"] for (i,gen) in network_lal["gen"] if gen["gen_status"] != 0) - pd_total
-    p_delta = 0.0
-    p_dc_delta = 0.0
+    # load_active = Dict(i => load for (i,load) in network_lal["load"] if load["status"] != 0)
+    # load_dc_active = Dict(i => busdc["Pdc"] for (i,busdc) in network_lal["busdc"])
+    # pd_total = sum(load["pd"] for (i,load) in load_active)
+    # p_losses = sum(gen["pg"] for (i,gen) in network_lal["gen"] if gen["gen_status"] != 0) - pd_total
+    # p_delta = 0.0
+    # p_dc_delta = 0.0
     
-    p_losses_dc1 = sum(abs(branchdc["pf"]) - abs(branchdc["pt"]) for (i, branchdc) in network_lal["branchdc"] if branchdc["pf"] > branchdc["pt"] && !isempty(branchdc["pf"]))
-    p_losses_dc2 = sum(abs(branchdc["pt"]) - abs(branchdc["pf"]) for (i, branchdc) in network_lal["branchdc"] if branchdc["pf"] < branchdc["pt"] && !isempty(branchdc["pf"]))
-    p_losses_dc = p_losses_dc1 + p_losses_dc2
-    p_losses_dc = 0.0
-    if p_losses > C1_PG_LOSS_TOL
-        load_count = length(load_active)
-        p_delta = p_losses/load_count
-        for (i,load) in load_active
-            load["pd"] += p_delta
-        end
-        _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")
-    end
+    # p_losses_dc1 = sum(abs(branchdc["pf"]) - abs(branchdc["pt"]) for (i, branchdc) in network_lal["branchdc"] if branchdc["pf"] > branchdc["pt"] && !isempty(branchdc["pf"]))
+    # p_losses_dc2 = sum(abs(branchdc["pt"]) - abs(branchdc["pf"]) for (i, branchdc) in network_lal["branchdc"] if branchdc["pf"] < branchdc["pt"] && !isempty(branchdc["pf"]))
+    # p_losses_dc = p_losses_dc1 + p_losses_dc2
+    # p_losses_dc = 0.0
+    # if p_losses > C1_PG_LOSS_TOL
+    #     load_count = length(load_active)
+    #     p_delta = p_losses/load_count
+    #     for (i,load) in load_active
+    #         load["pd"] += p_delta
+    #     end
+    #     _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")
+    # end
 
-    if p_losses_dc > C1_PG_LOSS_TOL
-        load_dc_count = length(load_dc_active)
-        p_dc_delta = p_losses_dc/load_dc_count
-        for i = 1: length(network_lal["busdc"])
-            network_lal["busdc"]["$i"]["Pdc"] += p_dc_delta
-        end
-        _PMSC.warn(_LOGGER, "dc power losses found $(p_losses_dc) increasing loads by $(p_delta)")         # Update_GM
-    end
+    # if p_losses_dc > C1_PG_LOSS_TOL
+    #     load_dc_count = length(load_dc_active)
+    #     p_dc_delta = p_losses_dc/load_dc_count
+    #     for i = 1: length(network_lal["busdc"])
+    #         network_lal["busdc"]["$i"]["Pdc"] += p_dc_delta
+    #     end
+    #     _PMSC.warn(_LOGGER, "dc power losses found $(p_losses_dc) increasing loads by $(p_delta)")         # Update_GM
+    # end
 
     gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
     branch_contingencies =  _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
@@ -127,7 +127,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         end
 
         try
-            solution =  run_acdcpf_GM( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]       
+            solution = _PMACDC.run_acdcpf(network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]       
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
@@ -145,7 +145,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
 
 
             if !haskey(gen_cuts_active, cont.label) || !(branch_vio.branch_id in gen_cuts_active[cont.label])
-                _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio)")
+                _PMSC.info(_LOGGER, "adding flow cut due to contingency $(cont.label) on branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio).")
 
                 branch = network_lal["branch"]["$(branch_vio.branch_id)"]
                 
@@ -154,7 +154,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
                 cut = (gen_cont_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, ptdf_branch=ptdf_branch, dcdf_branch=dcdf_branch)
                 push!(gen_cuts, cut)
             else
-                _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branch $(branch_vio.branch_id) with constraint flow violations $(branch_vio.sm_vio)")
+                _PMSC.warn(_LOGGER, "skipping flow cut due to contingency $(cont.label) on branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio).")
             end
         end
 
@@ -181,7 +181,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         cont_branch["br_status"] = 0
 
         try
-            solution = run_acdcpf_GM( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]          
+            solution = _PMACDC.run_acdcpf(network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]          
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
@@ -196,7 +196,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
         if vio.sm > sm_threshold
             branch_vio = _PMSC.branch_c1_violations_sorted(network_lal, network_lal)[1]
             if !haskey(branch_cuts_active, cont.label) || !(branch_vio.branch_id in branch_cuts_active[cont.label])
-                _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio)")
+                _PMSC.info(_LOGGER, "adding flow cut due to contingency $(cont.label) on branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio).")
 
                 branch = network_lal["branch"]["$(branch_vio.branch_id)"]
                 
@@ -207,7 +207,7 @@ function check_c1_contingencies_branch_power_GM(network, optimizer;
                 cut = (branch_cont_id=cont.idx, cont_label=cont.label, branch_id=branch_vio.branch_id, rating_level=1.0, ptdf_branch=ptdf_branch, dcdf_branch=dcdf_branch, p_dc_fr = p_dc_fr, p_dc_to = p_dc_to)
                 push!(branch_cuts, cut)
             else
-                _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branch $(branch_vio.branch_id) with constraint flow violations $(branch_vio.sm_vio)")
+                _PMSC.warn(_LOGGER, "skipping flow cut due to contingency $(cont.label) on branch $(branch_vio.branch_id) due to constraint flow violations $(branch_vio.sm_vio).")
             end
         end
 
@@ -228,9 +228,20 @@ branchdc_cuts = []
 
         cont_branchdc = network_lal["branchdc"]["$(cont.idx)"]
         cont_branchdc["status"] = 0
+        
+        # make both converter's status as zero as well so the converter losses become zero
+        for (i, convdc) in network_lal["convdc"]
+            if convdc["busdc_i"] == cont_branchdc["fbusdc"]
+                convdc["status"] = 0
+            end
+            if convdc["busdc_i"] == cont_branchdc["tbusdc"]
+                convdc["status"] = 0
+            end
+        end
+        
 
         try
-            solution = run_acdcpf_GM( network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]
+            solution = _PMACDC.run_acdcpf(network_lal, _PM.DCPPowerModel, optimizer; setting = s)["solution"]
             _PM.update_data!(network_lal, solution)
         catch exception
             _PMSC.warn(_LOGGER, "ACDCPF solve failed on $(cont.label)")
@@ -244,37 +255,47 @@ branchdc_cuts = []
         if vio.smdc > sm_threshold
             branchdc_vio = branchdc_violations_sorted(network_lal, network_lal)[1]
             if !haskey(branchdc_cuts_active, cont.label) || !(branchdc_vio.branchdc_id in branchdc_cuts_active[cont.label])
-                _PMSC.info(_LOGGER, "adding flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio)")
+                _PMSC.info(_LOGGER, "adding flow cut due to contingency $(cont.label) on branchdc $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio).")
 
                 branchdc = network_lal["branchdc"]["$(branchdc_vio.branchdc_id)"]
                 
                 ptdf, idcdf_branchdc = calc_ptdf_branchdc_idcdf_single(network_lal, ref_bus_id, branchdc)
+
                 cut = (branchdc_cont_id=cont.idx, cont_label=cont.label, branchdc_id=branchdc["index"], rating_level=1.0, ptdf=ptdf, idcdf_branchdc=idcdf_branchdc)
                 push!(branchdc_cuts, cut)
                 
             else
-                _PMSC.warn(_LOGGER, "skipping flow cut on cont $(cont.label) branchdc $(branchdc_vio.branchdc_id) with constraint flow violations $(branchdc_vio.smdc_vio)")
+                _PMSC.warn(_LOGGER, "skipping flow cut due to contingency $(cont.label) on branchdc $(branchdc_vio.branchdc_id) due to constraint flow violations $(branchdc_vio.smdc_vio).")
             end
         end
 
         cont_branchdc["status"] = 1
+        # make both converter's status as 1 as well
+        for (i, convdc) in network_lal["convdc"]
+            if convdc["busdc_i"] == cont_branchdc["fbusdc"]
+                convdc["status"] = 1
+            end
+            if convdc["busdc_i"] == cont_branchdc["tbusdc"]
+                convdc["status"] = 1
+            end
+        end
     end
 
 ######################################################################################################################################################
 
-    if p_delta != 0.0
-        _PMSC.warn(_LOGGER, "re-adjusting loads by $(-p_delta)")
-        for (i,load) in load_active
-            load["pd"] -= p_delta
-        end
-    end
+    # if p_delta != 0.0
+    #     _PMSC.warn(_LOGGER, "re-adjusting loads by $(-p_delta)")
+    #     for (i,load) in load_active
+    #         load["pd"] -= p_delta
+    #     end
+    # end
 
-    if p_dc_delta != 0.0
-        _PMSC.warn(_LOGGER, "re-adjusting dc loads by $(-p_delta)")        # Update_GM
-        for i = 1: length(network_lal["busdc"])
-            network_lal["busdc"]["$i"]["Pdc"] -= p_dc_delta
-        end
-    end
+    # if p_dc_delta != 0.0
+    #     _PMSC.warn(_LOGGER, "re-adjusting dc loads by $(-p_delta)")        # Update_GM
+    #     for i = 1: length(network_lal["busdc"])
+    #         network_lal["busdc"]["$i"]["Pdc"] -= p_dc_delta
+    #     end
+    # end
 
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")
@@ -387,18 +408,25 @@ function calc_incidence_matrix_dc(data::Dict{String,<:Any})
     J = Int[]   
     V = Int[]
 
-    b = [branchdc for (i,branchdc) in data["branchdc"] if branchdc["status"] != 0]
+    b = [branchdc for (i,branchdc) in data["branchdc"]]
     branchdc_ordered = sort(b, by=(x) -> x["index"])
     for (i,branchdc) in enumerate(branchdc_ordered)
         fbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["fbusdc"]]
         tbusdc_conv = [convdc["busac_i"] for (j,convdc) in data["convdc"] if convdc["busdc_i"] == branchdc["tbusdc"]]
         
-        push!(I, i); push!(J, fbusdc_conv[1]); push!(V,  1)
-        push!(I, i); push!(J, tbusdc_conv[1]); push!(V, -1)
+        if branchdc["status"] !== 0
+            push!(I, i); push!(J, fbusdc_conv[1]); push!(V,  1)
+            push!(I, i); push!(J, tbusdc_conv[1]); push!(V, -1)
+        
+        elseif branchdc["status"] == 0
+            push!(I, i); push!(J, fbusdc_conv[1]); push!(V, 0)
+            push!(I, i); push!(J, tbusdc_conv[1]); push!(V, 0)
+        end
 
         for k in length(J):length(data["bus"])
             push!(I, i); push!(J, k); push!(V, 0)
         end
+
     end
 
     return _PM.sparse(I,J,V)
@@ -484,13 +512,34 @@ function calc_susceptance_matrix_GM(data::Dict{String,<:Any})
             push!(I, t_bus); push!(J, t_bus); push!(V,  b_val)
         end
     end
+    # for (j, bus) in data["bus"]
+    #     for (b,branch) in data["branch"]
+    #         if j !== string(branch["f_bus"]) && j !== string(branch["t_bus"]) 
+    #             for (c, conv) in data["convdc"]
+    #                 if j == string(conv["busac_i"])
+    #                     _PMSC.warn(_LOGGER, "adding offshore bus $(j) to the PTDF matrix")
+    #                     for k in length(J):length(data["bus"])
+    #                         push!(I, j); push!(J, k); push!(V, 0)
+    #                     end
+    #                 end
+    #             end
+    #         end
+    #     end
+    # end
+
+   
 
     m1 = _PM.sparse(I,J,V)
 
-    m2 = vcat(m1,zeros(1, 66))
-    m3 = hcat(m2, zeros(1, 67)')
+    if isqrt(length(m1)) == length(buses)
+        M = m1
+    elseif length(buses) - isqrt(length(m1)) == 1
+        _PMSC.warn(_LOGGER, "adjusting order of PTDF matrix by 1.")
+        m2 = vcat(m1,zeros(1, isqrt(length(m1))))
+        M = hcat(m2, zeros(1, isqrt(length(m1)) + 1)')
+    end
 
-    return _PM.AdmittanceMatrix(idx_to_bus, bus_to_idx, m3  )
+    return _PM.AdmittanceMatrix(idx_to_bus, bus_to_idx, M)
 end
 
 "note, data should be a PowerModels network data model; only supports networks with exactly one refrence bus"
@@ -499,7 +548,7 @@ function calc_susceptance_matrix_inv_GM(data::Dict{String,<:Any})
 
     sm = calc_susceptance_matrix_GM(data)
 
-    ref_bus = _PM.reference_bus(data)
+    ref_bus = data["bus"]["3"]   #_PM.reference_bus(data)
     sm_inv = calc_admittance_matrix_inv_GM(sm, sm.bus_to_idx[ref_bus["index"]])
 
     return sm_inv

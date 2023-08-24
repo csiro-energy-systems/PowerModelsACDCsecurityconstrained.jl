@@ -88,8 +88,20 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
             gen["pg"] += gen["alpha"]*delta
         end
 
+
+        for (i,gen) in network_lal["gen"]
+            if isnan(gen["pg"]) || isnan(gen["qg"])
+                println("gen $i")
+            end
+        end
+        for (i,branch) in network_lal["branch"]
+            if isnan(branch["br_r"]) || isnan(branch["br_x"])
+                println("branch $i")
+            end
+        end
+
         try
-            solution =  _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
+            solution =  _PMACDC.run_acdcpf( network_lal, model_type, optimizer, setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
             ### results_c["c$(cont.label)"] = solution  
         catch exception

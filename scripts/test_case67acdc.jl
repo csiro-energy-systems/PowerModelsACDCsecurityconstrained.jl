@@ -1,5 +1,4 @@
-using Pkg
-Pkg.activate("./scripts")
+
 
 using Ipopt
 using Cbc
@@ -100,14 +99,20 @@ for i=1:length(data["branch"])
         data["branch"]["$i"]["ta_max"] = 0
     end
 end
-
+#to test
+for i=1:length(data["gen"])
+    data["gen"]["$i"]["model"] = 2
+    data["gen"]["$i"]["ncost"] = 2
+    data["gen"]["$i"]["cost"] = [0.1, 25, 25, 45]
+end
 
 PM_acdc.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
+@time results = PM_acdc_sc.run_acdc_scopf_ptdf_dcdf_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_acdc_scopf_cuts, nlp_solver)
 # data_SI = deepcopy(data)
 # data_minlp = deepcopy(data)
 # result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
-@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
+@time result_ACDC_scopf_soft_ndc = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
 
 @time result_ACDC_scopf_re_dispatch_oltc_pst = PM_acdc_sc.run_ACDC_scopf_re_dispatch(data, result_ACDC_scopf_soft, PM.ACPPowerModel, nlp_solver) 
 
