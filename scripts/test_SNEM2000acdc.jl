@@ -1,5 +1,6 @@
 # Test script for PowerModelsACDCsecurityconstrained on SNEM2000acdc
-
+using Pkg
+Pkg.activate("./")
 using Ipopt
 using JuMP
 using PowerModels
