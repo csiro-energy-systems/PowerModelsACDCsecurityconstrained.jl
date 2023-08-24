@@ -79,5 +79,6 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/ndc_filter.jl")
    
+    include("utils/split_gen.jl")
 
 end # module
