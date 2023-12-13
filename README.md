@@ -1,4 +1,4 @@
-# PowerModelsACDCSecurityConstrained.jl
+# PowerModelsACDCsecurityconstrained.jl
 
 
 PowerModelsACDCsecurityconstrained.jl is a Julia/JuMP/PowerModels package for security-constrained optimal power flow in AC-DC grids.
