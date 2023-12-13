@@ -1,6 +1,6 @@
-
 # Test script for PowerModelsACDCsecurityconstrained on SNEM2000acdc
-
+using Pkg
+Pkg.activate("./")
 using Ipopt
 using JuMP
 using PowerModels
@@ -8,17 +8,15 @@ using PowerModelsACDC
 using PowerModelsSecurityConstrained
 using PowerModelsACDCsecurityconstrained
 
-
 const PM = PowerModels
 const PM_acdc = PowerModelsACDC
 const PM_sc = PowerModelsSecurityConstrained
 const PM_acdc_sc = PowerModelsACDCsecurityconstrained
 
-
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer,"print_level"=>0, "tol"=>1e-6)
 
 ## Include some helper functions
-include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/scripts/extra/SNEM2000.jl")
+include("../scripts/extra/SNEM2000.jl")
 
 file = "./data/snem2000_acdc.m"
 data = parse_file(file)
@@ -176,7 +174,7 @@ for (i, branch) in data["branch"]
 end
 data["contingencies"] = []
 
-split_large_coal_powerplants_to_units!(data)
+PM_acdc_sc.split_large_coal_powerplants_to_units!(data)
 
 for (i,conv) in data["convdc"]
     data["busdc"]["$(conv["busdc_i"])"]["area"] = data["bus"]["$(conv["busac_i"])"]["area"]
@@ -230,7 +228,7 @@ for (i,conv) in data["convdc"]
     # conv["Pdcset"] = solution["convdc"][i]["pdc"]
 end
 
-data["branch"]["1647"]["status"] = 0
+data["branch"]["1647"]["status"] = 1
 
 # data["branchdc"]["3"]["status"] = 1
 data["convdc"]["6"]["status"] = 1
