@@ -41,10 +41,10 @@ data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "
 data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
 data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
 
-data["convdc_contingencies"] = Vector{Any}(undef, 3)
-data["convdc_contingencies"][1] = (idx = 1, label = "13", type = "convdc")
-data["convdc_contingencies"][2] = (idx = 2, label = "14", type = "convdc")
-data["convdc_contingencies"][3] = (idx = 3, label = "15", type = "convdc")
+# data["convdc_contingencies"] = Vector{Any}(undef, 3)
+# data["convdc_contingencies"][1] = (idx = 1, label = "13", type = "convdc")
+# data["convdc_contingencies"][2] = (idx = 2, label = "14", type = "convdc")
+# data["convdc_contingencies"][3] = (idx = 3, label = "15", type = "convdc")
 
 data["area_gens"] = Dict{Int64, Set{Int64}}()
 data["area_gens"][1] = Set([2, 1])

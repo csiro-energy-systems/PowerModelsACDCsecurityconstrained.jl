@@ -27,7 +27,7 @@ function expression_branchdc_powerflow(pm::_PM.AbstractPowerModel, n::Int, i::In
 end
 
 """
-defines power flow on the dc branches, varies in contingencies
+defines power flow on the ac branches, varies in contingencies
 """
 function expression_branch_powerflow(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     if !haskey(_PM.var(pm, nw), :branch_p_fr)

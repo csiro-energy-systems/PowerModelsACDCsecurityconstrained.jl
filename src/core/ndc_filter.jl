@@ -544,31 +544,37 @@ end
 function contingency_order(network)
     gen_cont_order = sort(network["gen_contingencies"], by=(x) -> x.label)
     branch_cont_order = sort(network["branch_contingencies"], by=(x) -> x.label)
+    branchdc_cont_order = sort(network["branchdc_contingencies"], by=(x) -> x.label)
+    convdc_cont_order = sort(network["convdc_contingencies"], by=(x) -> x.label)
 
     gen_cont_total = length(gen_cont_order)
     branch_cont_total = length(branch_cont_order)
+    branchdc_cont_total = length(branchdc_cont_order)
+    convdc_cont_total = length(convdc_cont_order)
 
-    gen_rate = 1.0
-    branch_rate = 1.0
-    steps = 1
+    # gen_rate = 1.0
+    # branch_rate = 1.0
+    # branchdc_rate = 1.0
+    # convdc_rate = 1.0
+    # steps = 1
 
-    if gen_cont_total == 0 && branch_cont_total == 0
-        # defaults are good
-    elseif gen_cont_total == 0 && branch_cont_total != 0
-        steps = branch_cont_total
-    elseif gen_cont_total != 0 && branch_cont_total == 0
-        steps = gen_cont_total
-    elseif gen_cont_total == branch_cont_total
-        steps = branch_cont_total
-    elseif gen_cont_total < branch_cont_total
-        gen_rate = 1.0
-        branch_rate = branch_cont_total/gen_cont_total
-        steps = gen_cont_total
-    elseif gen_cont_total > branch_cont_total
-        gen_rate = gen_cont_total/branch_cont_total
-        branch_rate = 1.0 
-        steps = branch_cont_total
-    end
+    # if gen_cont_total == 0 && branch_cont_total == 0
+    #     # defaults are good
+    # elseif gen_cont_total == 0 && branch_cont_total != 0
+    #     steps = branch_cont_total
+    # elseif gen_cont_total != 0 && branch_cont_total == 0
+    #     steps = gen_cont_total
+    # elseif gen_cont_total == branch_cont_total
+    #     steps = branch_cont_total
+    # elseif gen_cont_total < branch_cont_total
+    #     gen_rate = 1.0
+    #     branch_rate = branch_cont_total/gen_cont_total
+    #     steps = gen_cont_total
+    # elseif gen_cont_total > branch_cont_total
+    #     gen_rate = gen_cont_total/branch_cont_total
+    #     branch_rate = 1.0 
+    #     steps = branch_cont_total
+    # end
 
     #println(gen_cont_total)
     #println(branch_cont_total)
@@ -579,36 +585,40 @@ function contingency_order(network)
     #println("")
 
     cont_order = []
-    gen_cont_start = 1
-    branch_cont_start = 1
-    for s in 1:steps
-        gen_cont_end = min(gen_cont_total, trunc(Int,ceil(s*gen_rate)))
-        #println(gen_cont_start:gen_cont_end)
-        for j in gen_cont_start:gen_cont_end
-            push!(cont_order, gen_cont_order[j])
-        end
-        gen_cont_start = gen_cont_end+1
+    # gen_cont_start = 1
+    # branch_cont_start = 1
+    # for s in 1:steps
+    #     gen_cont_end = min(gen_cont_total, trunc(Int,ceil(s*gen_rate)))
+    #     #println(gen_cont_start:gen_cont_end)
+    #     for j in gen_cont_start:gen_cont_end
+    #         push!(cont_order, gen_cont_order[j])
+    #     end
+    #     gen_cont_start = gen_cont_end+1
 
-        branch_cont_end = min(branch_cont_total, trunc(Int,ceil(s*branch_rate)))
-        #println("$(s) - $(branch_cont_start:branch_cont_end)")
-        for j in branch_cont_start:branch_cont_end
-            push!(cont_order, branch_cont_order[j])
-        end
-        branch_cont_start = branch_cont_end+1
-    end
+    #     branch_cont_end = min(branch_cont_total, trunc(Int,ceil(s*branch_rate)))
+    #     #println("$(s) - $(branch_cont_start:branch_cont_end)")
+    #     for j in branch_cont_start:branch_cont_end
+    #         push!(cont_order, branch_cont_order[j])
+    #     end
+    #     branch_cont_start = branch_cont_end+1
+    # end
+    append!(cont_order, gen_cont_order)
+    append!(cont_order, branch_cont_order)
+    append!(cont_order, branchdc_cont_order)
+    append!(cont_order, convdc_cont_order)
 
-    @assert(length(cont_order) == gen_cont_total + branch_cont_total)
+    @assert(length(cont_order) == gen_cont_total + branch_cont_total + branchdc_cont_total + convdc_cont_total)
 
     return cont_order
 end
 
 
 
-function check_contingency_violations_distributed_remote(cont_range, output_dir, cut_limit=1, solution_file="solution1.txt")
+function check_contingency_violations_distributed_remote(cont_range, output_dir, contingency_limit=1, solution_file="solution1.txt")
     if length(network_global) <= 0 || length(contingency_order_global) <= 0
-        error(_LOGGER, "check_contingencies_branch_flow_remote called before load_c1_network_global")
+        Memento.error(_LOGGER, "check_contingency_violations_distributed_remote called before load_network_global_new")
     end
-    nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "max_cpu_time" => 60, "max_iter" => 100)  
+    nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0) 
     # sol = read_c1_solution1(c1_network_global, output_dir=output_dir, state_file=solution_file)
     # _PM.update_data!(c1_network_global, sol)
 
@@ -631,8 +641,10 @@ function check_contingency_violations_distributed_remote(cont_range, output_dir,
     setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true)
     network["gen_contingencies"] = [c for c in contingencies if c.type == "gen"]
     network["branch_contingencies"] = [c for c in contingencies if c.type == "branch"]
+    network["branchdc_contingencies"] = [c for c in contingencies if c.type == "branchdc"]
+    network["convdc_contingencies"] = [c for c in contingencies if c.type == "convdc"]
 
-    cuts = check_contingency_violations_distributed(network, _PM.ACPPowerModel, nlp_solver, setting)
+    cuts = check_contingency_violations_distributed(network, _PM.DCPPowerModel, nlp_solver, setting)
 
     return cuts
 end
@@ -670,15 +682,15 @@ function check_contingency_violations_distributed(network, model_type, optimizer
     #     _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
     # end
 
-            # gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
-            # branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
-            # branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
-            # convdc_contingencies = calc_convdc_contingency_subset(network_lal, convdc_eval_limit=convdc_eval_limit)
+            gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
+            branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
+            branchdc_contingencies = calc_c1_branchdc_contingency_subset(network_lal, branchdc_eval_limit=branchdc_eval_limit)            # Update_GM
+            convdc_contingencies = calc_convdc_contingency_subset(network_lal, convdc_eval_limit=convdc_eval_limit)
 
-            gen_contingencies = network["gen_contingencies"]
-            branch_contingencies = network["branch_contingencies"]
-            branchdc_contingencies = network["branchdc_contingencies"]
-            convdc_contingencies = network["convdc_contingencies"]
+            # gen_contingencies = network["gen_contingencies"]
+            # branch_contingencies = network["branch_contingencies"]
+            # branchdc_contingencies = network["branchdc_contingencies"]
+            # convdc_contingencies = network["convdc_contingencies"]
 
 
            
@@ -994,69 +1006,167 @@ function check_contingency_violations_distributed(network, model_type, optimizer
 
     # if p_delta != 0.0
     #     _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # TO DO dc lossess
+    #     for (i,load) in load_active
     #         load["pd"] -= p_delta
     #     end
     # end
+    
 
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
 
-    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts) 
+    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts, active_conts_by_branch=active_conts_by_branch, active_conts_by_branchdc=active_conts_by_branchdc) 
 end
 
+function filtering_dominated_contingencies(gen_cuts, branch_cuts, branchdc_cuts, convdc_cuts, active_conts_by_branch, active_conts_by_branchdc)
 
-# function check_contingencies_distributed(network;output_dir::String="")
-    
-   
-#     time_worker_start = time()
-#     workers = Distributed.workers()
-#     print(workers)
-#     _PMSC.info(_LOGGER, "start warmup on $(length(workers)) workers")
-#     worker_futures = []
-#     for wid in workers
-#         future = _DI.remotecall(load_network_global, wid, network)
-#         push!(worker_futures, future)
-#     end
+    dominated_contingencies = []
+    if !isempty(gen_cuts)
+        for contn in gen_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
-#     # setup for contigency solve
-#     gen_cont_total = length(network["gen_contingencies"])
-#     branch_cont_total = length(network["branch_contingencies"])
-#     cont_total = gen_cont_total + branch_cont_total
-#     cont_per_proc = cont_total/length(workers)
+    if !isempty(branch_cuts)
+        for contn in branch_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
-#     cont_order = contingency_order(network)
-#     cont_range = []
-#     for p in 1:length(workers)
-#         cont_start = trunc(Int, ceil(1+(p-1)*cont_per_proc))
-#         cont_end = min(cont_total, trunc(Int,ceil(p*cont_per_proc)))
-#         push!(cont_range, cont_start:cont_end,)
-#     end
+    if !isempty(branchdc_cuts)
+        for contn in branchdc_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
-#     for (i,rng) in enumerate(cont_range)
-#         _PMSC.info(_LOGGER, "task $(i): $(length(rng)) / $(rng)")
-#     end
-#     #pmap(filter_c1_network_global_contingencies, cont_range)
-#     output_dirs = [output_dir for i in 1:length(workers)]
+    if !isempty(convdc_cuts)
+        for contn in convdc_cuts
+            for (i, x) in active_conts_by_branch
+                if haskey(active_conts_by_branch, "$(contn.label)")
+                    if active_conts_by_branch["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branch["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branch, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+                if haskey(active_conts_by_branchdc, "$(contn.label)")
+                    if active_conts_by_branchdc["$(contn.label)"][1] == x[1] && "$(contn.label)" !=i
+                        if active_conts_by_branchdc["$(contn.label)"][2] >=x[2]
+                            push!(dominated_contingencies, i)
+                            delete!(active_conts_by_branchdc, i)
+                            _PMSC.info(_LOGGER, "contingency $(contn.label) dominates over contingency $i")
+                        end
+                    end
+                end
+            end
+        end
+    end
 
-#     _PMSC.info(_LOGGER, "waiting for worker warmup to complete: $(time())")
-#     for future in worker_futures
-#         wait(future)
-#     end
+    gen_cuts_delete_index =[]
+    if !isempty(gen_cuts)
+        for (i,contn) in enumerate(gen_cuts)            
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                push!(gen_cuts_delete_index, findfirst(isequal(contn), gen_cuts))  
+                _PMSC.info(_LOGGER, "gen contingency $(contn.label) removed")
+            end
+        end
+        deleteat!(gen_cuts, sort(gen_cuts_delete_index[1:length(gen_cuts_delete_index)]) )            
+    end
+    branch_cuts_delete_index =[]
+    if !isempty(branch_cuts)
+        for (i,contn) in enumerate(branch_cuts)            
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                push!(branch_cuts_delete_index, findfirst(isequal(contn), branch_cuts))  
+                _PMSC.info(_LOGGER, "branch contingency $(contn.label) removed")
+            end
+        end
+        deleteat!(branch_cuts, sort(branch_cuts_delete_index[1:length(branch_cuts_delete_index)]) )           
+    end
 
-#     time_worker = time() - time_worker_start
-#     _PMSC.info(_LOGGER, "total worker warmup time: $(time_worker)")
-#     solution_file = ["solution.txt" for p in 1:length(workers)]
+    branchdc_cuts_delete_index =[]
+    if !isempty(branchdc_cuts)
+        for (i,contn) in enumerate(branchdc_cuts)            
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                push!(branchdc_cuts_delete_index, findfirst(isequal(contn), branchdc_cuts))  
+                _PMSC.info(_LOGGER, "branchdc contingency $(contn.label) removed")
+            end
+        end
+        deleteat!(branchdc_cuts, sort(branchdc_cuts_delete_index[1:length(branchdc_cuts_delete_index)]) )            
+    end
 
-#     # network["gen_flow_cuts"] = []
-#     # network["branch_flow_cuts"] = []
+    convdc_cuts_delete_index =[]
+    if !isempty(convdc_cuts)
+        for (i,contn) in enumerate(convdc_cuts)            
+            if !haskey(active_conts_by_branch, "$(contn.label)") && !haskey(active_conts_by_branchdc, "$(contn.label)")
+                push!(convdc_cuts_delete_index, findfirst(isequal(contn), convdc_cuts))  
+                _PMSC.info(_LOGGER, "convdc contingency $(contn.label) removed")
+            end
+        end
+        deleteat!(convdc_cuts, sort(convdc_cuts_delete_index[1:length(convdc_cuts_delete_index)]) )           
+    end
+ 
 
-#     # _PMSC.write_c1_active_flow_cuts(network, output_dir=output_dir)
-#     print(workers)
-#     #cuts = pmap(check_c1_contingencies_branch_power_remote, cont_range, output_dirs, [iteration for p in 1:length(workers)], [true for p in 1:length(workers)], solution_file_apo)
-#     iteration  = 1
-#     conts = _DI.pmap(check_contingency_violations_distributed_remote, cont_range, output_dirs, [iteration for p in 1:length(workers)], solution_file)
-#     # cuts_found = sum(length(c.gen_cuts)+length(c.branch_cuts) for c in cuts)
-# end
+    return (gen_contingencies=gen_cuts, branch_contingencies=branch_cuts, branchdc_contingencies=branchdc_cuts, convdc_contingencies=convdc_cuts) 
+end
 
 
 

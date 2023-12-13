@@ -26,71 +26,7 @@ minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_sol
 file = "./data/case24_3zones_acdc_sc.m"
 data = parse_file(file)
 
-idx_ac = [contingency["branch_id1"] for (i, contingency) in data["contingencies"]]
-idx_dc = [contingency["dcbranch_id1"] for (i, contingency) in data["contingencies"]]
-idx_gen = [contingency["gen_id1"] for (i, contingency) in data["contingencies"]]
-idx_convdc = [contingency["dcconv_id1"] for (i, contingency) in data["contingencies"]]
-labels = [contingency["source_id"][2] for (i, contingency) in data["contingencies"]]
-
-data["branch_contingencies"] = [(idx = id, label = string(labels[i]), type = "branch") for (i,id) in enumerate(idx_ac) if id != 0]
-data["branchdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "branchdc") for (i,id) in enumerate(idx_dc) if id != 0]
-data["gen_contingencies"] = [(idx = id, label = string(labels[i]), type = "gen") for (i,id) in enumerate(idx_gen) if id != 0]
-data["convdc_contingencies"] = [(idx = id, label = string(labels[i]), type = "convdc") for (i,id) in enumerate(idx_convdc) if id != 0]
-
-data["area_gens"] = Dict{Int64, Set{Int64}}()
-data["area_gens"][11] = Set{Int64}()
-data["area_gens"][12] = Set{Int64}()
-data["area_gens"][13] = Set{Int64}()
-data["area_gens"][14] = Set{Int64}()
-
-for (i,gen) in data["gen"]
-    bus_id = gen["gen_bus"]
-    if data["bus"]["$bus_id"]["area"] == 11
-        push!(data["area_gens"][11], parse(Int64, i))
-    elseif data["bus"]["$bus_id"]["area"] == 12
-        push!(data["area_gens"][12], parse(Int64, i))
-    elseif data["bus"]["$bus_id"]["area"] == 13
-        push!(data["area_gens"][13], parse(Int64, i))
-    elseif data["bus"]["$bus_id"]["area"] == 14
-        push!(data["area_gens"][14], parse(Int64, i))
-    end
-end
-
-data["contingencies"] = []  # This to empty the existing contingencies in the data
-
-for i=1:length(data["gen"])
-    data["gen"]["$i"]["ep"] = 1e-1
-    data["gen"]["$i"]["alpha"] = 15.92 
-end
-
-for i=1:length(data["convdc"])
-    data["convdc"]["$i"]["ep"] = 1e-1
-end
-
-for i=1:length(data["convdc"])
-    data["convdc"]["$i"]["ep"] = 1e-1
-    data["convdc"]["$i"]["Vdclow"] = 0.98
-    data["convdc"]["$i"]["Vdchigh"] = 1.02
-end
-
-for i=1:length(data["branch"])
-    if data["branch"]["$i"]["tap"] !== 1 
-        data["branch"]["$i"]["tm_min"] = 0.9
-        data["branch"]["$i"]["tm_max"] = 1.1
-    end
-    if data["branch"]["$i"]["tap"] == 1 
-        data["branch"]["$i"]["tm_min"] = 1
-        data["branch"]["$i"]["tm_max"] = 1
-    end
-    if data["branch"]["$i"]["shift"] !== 0
-        data["branch"]["$i"]["ta_min"] = -15
-        data["branch"]["$i"]["ta_max"] = 15
-    end
-    if data["branch"]["$i"]["shift"] == 0
-        data["branch"]["$i"]["ta_min"] = 0
-        data["branch"]["$i"]["ta_max"] = 0
-    end
-end
+PM_acdc_sc.fix_scopf_data_case24_3zones_acdc!(data)
 
 # data["branch"]["1"]["tm_min"] = 0.9; data["branch"]["1"]["tm_max"] = 1.1; 
 # data["branch"]["2"]["tm_min"] = 0.9; data["branch"]["2"]["tm_max"] = 1.1; 

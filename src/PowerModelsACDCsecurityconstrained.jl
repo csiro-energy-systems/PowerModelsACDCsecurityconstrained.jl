@@ -7,6 +7,7 @@ module PowerModelsACDCsecurityconstrained
     import PowerModelsSecurityConstrained
     import Memento
     import LinearAlgebra
+    import IterativeSolvers
     import InfrastructureModels
     import Distributed
     # import PolyChaos
@@ -22,6 +23,7 @@ module PowerModelsACDCsecurityconstrained
     # const _PCE = PolyChaos
     # const _KDE = KernelDensity
     const _DI = Distributed
+    const _IS = IterativeSolvers
     
     # Create our module level logger (this will get precompiled)
     const _LOGGER = Memento.getlogger(@__MODULE__)
@@ -30,6 +32,14 @@ module PowerModelsACDCsecurityconstrained
     # Register the module level logger at runtime so that folks can access the logger via `getlogger(PowerModels)`
     # NOTE: If this line is not included then the precompiled `_PM._LOGGER` won't be registered at runtime.
     __init__() = Memento.register(_LOGGER)
+
+    function silence()
+        Memento.info(_LOGGER, "Suppressing info and warn from PowerModels, PowerModelsACDC, Distributed, PowerModelsSecurityConstrained.")
+        Memento.setlevel!(Memento.getlogger(PowerModels), "error")
+        Memento.setlevel!(Memento.getlogger(PowerModelsACDC), "error")
+        Memento.setlevel!(Memento.getlogger(Distributed), "error")
+        Memento.setlevel!(Memento.getlogger(PowerModelsSecurityConstrained), "error")
+    end
 
     include("core/variables.jl")
 
@@ -60,7 +70,7 @@ module PowerModelsACDCsecurityconstrained
     # include("core/ACDC_opf_stochastic.jl")   ## Stochastic
     # include("core/variable_stochastic.jl")
 
-    include("core/acdcopfACR.jl")       #ACR formulation
+    # include("core/acdcopfACR.jl")       #ACR formulation
 
     include("core/ACDC_re_dispatch.jl")       # Re-dispatch
 
@@ -79,5 +89,8 @@ module PowerModelsACDCsecurityconstrained
 
     include("core/ndc_filter.jl")
    
+    include("core/util.jl")     # NEM data fixing function
+
+    include("core/distributed.jl") # distributed functions
 
 end # module

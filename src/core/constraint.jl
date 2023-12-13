@@ -364,26 +364,76 @@ end
 
 
 #################################################################################################################################################################################################
-#################################################################################################################################################################################################
+######################################################### DROOP CONTROL ########################################################################################################################################
+##
+function constraint_dc_droop_control_linear(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw, :convdc, i)
 
-function constraint_dc_droop_control(pm::_PM.AbstractPowerModel, i::Int; nw_1::Int=_PM.nw_id_default, nw_2::Int=_PM.nw_id_default)
-    conv = _PM.ref(pm, nw_2, :convdc, i)
-    bus = _PM.ref(pm, nw_2, :busdc, conv["busdc_i"])
-
-    if conv["type_dc"] == 2
-       # _PMACDC.constraint_dc_voltage_magnitude_setpoint(pm, i)
-       # _PMACDC.constraint_reactive_conv_setpoint(pm, i)
-    elseif conv["type_dc"] == 3
-        constraint_dc_droop_control(pm, nw_1, nw_2, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"], conv["Vmmin"], conv["Vmmax"], conv["Vdclow"], conv["Vdchigh"], conv["ep"])
+    if conv["type_dc"] == 3
+        constraint_dc_droop_control_linear(pm, nw, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"])
     end 
 end
 
-function constraint_dc_droop_control(pm::_PM.AbstractACPModel, n_1::Int, n_2::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh, ep)
-    pconv_dc = _PM.var(pm, n_2, :pconv_dc, i)
-    vdc = _PM.var(pm, n_2, :vdcm, busdc_i)
- 
-  
+function constraint_dc_droop_control_linear(pm::_PM.AbstractACPModel, n::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop)
+    pconv_dc = _PM.var(pm, n, :pconv_dc, i)
+    vdc = _PM.var(pm, n, :vdcm, busdc_i)
 
+    JuMP.@constraint(pm.model, pconv_dc == pref_dc - sign(pref_dc) * 1 / k_droop * (vdc - vref_dc))
+end
+##
+function constraint_dc_droop_control_slack_link(pm::_PM.AbstractPowerModel, i::Int; nw_1::Int=_PM.nw_id_default, nw_2::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw_2, :convdc, i)
+
+    if conv["type_dc"] == 2
+        constraint_dc_droop_control_slack_link(pm, nw_1, nw_2, i, conv["busdc_i"])
+    end 
+end
+
+function constraint_dc_droop_control_slack_link(pm::_PM.AbstractACPModel, n1::Int, n2::Int, i::Int, busdc_i,)
+    vdc_1 = _PM.var(pm, n1, :vdcm, busdc_i)
+    vdc = _PM.var(pm, n2, :vdcm, busdc_i)
+
+    JuMP.@constraint(pm.model, vdc_1 == vdc)
+end
+
+
+
+
+
+
+
+
+
+#################################################################################################################################################################################################
+######################################################### DROOP CONTROL ########################################################################################################################################
+
+
+function constraint_dc_droop_control(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    conv = _PM.ref(pm, nw, :convdc, i)
+
+    if conv["type_dc"] == 3
+        if conv["Pdcset"] >= 0.0
+            constraint_dc_droop_control_positive(pm, nw, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"], conv["Vmmin"], conv["Vmmax"], conv["Vdclow"], conv["Vdchigh"], conv["ep"])
+        elseif conv["Pdcset"] < 0.0
+            constraint_dc_droop_control_negative(pm, nw, i, conv["busdc_i"], conv["Vdcset"], conv["Pdcset"], conv["droop"], conv["Vmmin"], conv["Vmmax"], conv["Vdclow"], conv["Vdchigh"], conv["ep"])
+        end 
+    end
+end
+function constraint_dc_droop_control_positive(pm::_PM.AbstractACPModel, n::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh, ep)
+    pconv_dc = _PM.var(pm, n, :pconv_dc, i)
+    vdc = _PM.var(pm, n, :vdcm, busdc_i)
+
+    JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc +  (   -((1 /  k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax)) - ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - vdcmax + vdc)/ep))) 
+        -(-(1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax)) + ep * log(1 + exp(((1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - 2*vdcmax + vdchigh + vdc)/ep)) )
+        -((1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) - vdc + vdcmin)/ep)))
+        -(-((1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) - vdc + 2*vdcmin - vdclow )/ep)))   ))
+        )
+end
+
+function constraint_dc_droop_control_negative(pm::_PM.AbstractACPModel, n::Int, i::Int, busdc_i, vref_dc, pref_dc, k_droop, vdcmin, vdcmax, vdclow, vdchigh, ep)
+    pconv_dc = _PM.var(pm, n, :pconv_dc, i)
+    vdc = _PM.var(pm, n, :vdcm, busdc_i)
+ 
 
     # if pref_dc > 0
     #     k_droop_i = 1/ (((1/k_droop) *(vdcmax - vdchigh) - pref_dc)/(vdcmax - vdchigh))
@@ -447,7 +497,7 @@ function constraint_dc_droop_control(pm::_PM.AbstractACPModel, n_1::Int, n_2::In
     #JuMP.@constraint(pm.model, pconv_dc == pref_dc - sign(pref_dc) * 1 / k_droop * (vdc - vref_dc))
 
 
-        JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc + (   -((1 /  k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax)) - ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - vdcmax + vdc)/ep))) 
+        JuMP.@NLconstraint(pm.model, pconv_dc == pref_dc -  (   -((1 /  k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax)) - ep * log(1 + exp(((1 / k_droop * (vdcmax - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - vdcmax + vdc)/ep))) 
         -(-(1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax)) + ep * log(1 + exp(((1 / k_droop * (2*vdcmax - vdchigh - vdc) + 1 / k_droop * (vdchigh - vdcmax) ) - 2*vdcmax + vdchigh + vdc)/ep)) )
         -((1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (vdcmin - vdc) + 1 / k_droop * (vdclow - vdcmin)) - vdc + vdcmin)/ep)))
         -(-((1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) + ep*log(1 + exp((-(1 / k_droop * (2*vdcmin - vdc - vdclow) + 1 / k_droop * (vdclow - vdcmin)) - vdc + 2*vdcmin - vdclow )/ep)))   ))
@@ -517,10 +567,10 @@ function constraint_ohms_y_oltc_pst_from(pm::_PM.AbstractPowerModel, i::Int; nw:
     b_fr = branch["b_fr"]
     
 
-    vad_min = _PM.ref(pm, nw, :off_angmin)
-    vad_max = _PM.ref(pm, nw, :off_angmax)
+    # vad_min = _PM.ref(pm, nw, :off_angmin)
+    # vad_max = _PM.ref(pm, nw, :off_angmax)
 
-    constraint_ohms_y_oltc_pst_from(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, vad_min, vad_max)
+    constraint_ohms_y_oltc_pst_from(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti)
 end
 
 
@@ -537,10 +587,10 @@ function constraint_ohms_y_oltc_pst_to(pm::_PM.AbstractPowerModel, i::Int; nw::I
     g_to = branch["g_to"]
     b_to = branch["b_to"]
     
-    vad_min = _PM.ref(pm, nw, :off_angmin)
-    vad_max = _PM.ref(pm, nw, :off_angmax)
+    # vad_min = _PM.ref(pm, nw, :off_angmin)
+    # vad_max = _PM.ref(pm, nw, :off_angmax)
 
-    constraint_ohms_y_oltc_pst_to(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, vad_min, vad_max)
+    constraint_ohms_y_oltc_pst_to(pm, nw, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti)
 end
 
 """
@@ -550,7 +600,7 @@ p[f_idx] == z*(g/tm*v[f_bus]^2 + (-g*tr+b*ti)/tm^2*(v[f_bus]*v[t_bus]*cos(t[f_bu
 q[f_idx] == z*(-(b+c/2)/tm*v[f_bus]^2 - (-b*tr-g*ti)/tm^2*(v[f_bus]*v[t_bus]*cos(t[f_bus]-t[t_bus]-ta)) + (-g*tr+b*ti)/tm^2*(v[f_bus]*v[t_bus]*sin(t[f_bus]-t[t_bus]-ta)))
 ```
 """
-function constraint_ohms_y_oltc_pst_from(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti, vad_min, vad_max)
+function constraint_ohms_y_oltc_pst_from(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_fr, b_fr, tr, ti)
     p_fr  = _PM.var(pm, n,  :p, f_idx)
     q_fr  = _PM.var(pm, n,  :q, f_idx)
     vm_fr = _PM.var(pm, n, :vm, f_bus)
@@ -573,7 +623,7 @@ p[t_idx] == z*(g*v[t_bus]^2 + (-g*tr-b*ti)/tm^2*(v[t_bus]*v[f_bus]*cos(t[t_bus]-
 q[t_idx] == z*(-(b+c/2)*v[t_bus]^2 - (-b*tr+g*ti)/tm^2*(v[t_bus]*v[f_bus]*cos(t[f_bus]-t[t_bus]+ta)) + (-g*tr-b*ti)/tm^2*(v[t_bus]*v[f_bus]*sin(t[t_bus]-t[f_bus]+ta)))
 ```
 """
-function constraint_ohms_y_oltc_pst_to(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti, vad_min, vad_max)
+function constraint_ohms_y_oltc_pst_to(pm::_PM.AbstractACPModel, n::Int, i, f_bus, t_bus, f_idx, t_idx, g, b, g_to, b_to, tr, ti)
     p_to  = _PM.var(pm, n,  :p, t_idx)
     q_to  = _PM.var(pm, n,  :q, t_idx)
     vm_fr = _PM.var(pm, n, :vm, f_bus)
@@ -727,8 +777,144 @@ end
 
 
 
+# constraints for ptdf dcdf cuts soft
 
-""
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branch_flow_cuts, i)
+    branch =  _PM.ref(pm, nw, :branch, cut.branch_id)
+    branch_dc = _PM.ref(pm, :branchdc)
+    fr_idx = [(i, branchdc["fbusdc"], branchdc["tbusdc"]) for (i,branchdc) in branch_dc] 
+    # f_idx = (i, f_bus, t_bus)
+    ploss = _PM.ref(pm, nw, :ploss)
+    ploss_df = _PM.ref(pm, nw, :ploss_df)
+    f_bus = branch["f_bus"]
+    t_bus = branch["t_bus"]
+    f_idx = (i, f_bus, t_bus)
+    t_idx = (i, t_bus, f_bus)
+
+    if haskey(branch, "rate_c")
+        constraint_branch_contingency_ptdf_dcdf_thermal_limit_from_soft(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_fr, branch["rate_c"], fr_idx, f_idx, t_idx, ploss, ploss_df)
+    end
+end
+
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from_soft(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_fr, rate, fr_idx, f_idx, t_idx, ploss, ploss_df)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    branch_cont_flow_vio = _PM.var(pm, :branch_cont_flow_vio, i)
+    # p_dc_fr = _PM.var(pm, n, :p_dcgrid, fr_idx)
+
+    # p_fr  = _PM.var(pm, n,  :p, f_idx)
+    # p_to  = _PM.var(pm, n,  :p, t_idx)
+    
+    JuMP.@constraint(pm.model,  sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] + ploss_df[bus_id]*ploss)) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate + branch_cont_flow_vio)
+    JuMP.@constraint(pm.model, -sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] + ploss_df[bus_id]*ploss)) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate + branch_cont_flow_vio)
+    
+    # JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] + p_fr-p_to)) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate + branch_cont_flow_vio)
+    # JuMP.@constraint(pm.model, -sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] - p_fr+p_to)) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id])  for (branchdc_id, weight_dc) in cut_map_dc)  <= rate + branch_cont_flow_vio)
+    
+    
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+
+##################### ##################### ##################### 
+
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branch_flow_cuts, i)
+    branch = _PM.ref(pm, nw, :branch, cut.branch_id)
+    branch_dc = _PM.ref(pm, :branchdc)
+    to_idx = [(i, branchdc["tbusdc"], branchdc["fbusdc"]) for (i,branchdc) in branch_dc] 
+    # t_idx = (i, t_bus, f_bus)
+    
+    if haskey(branch, "rate_c")
+        constraint_branch_contingency_ptdf_dcdf_thermal_limit_to_soft(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_to, branch["rate_c"], to_idx)
+    end
+end
+
+function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to_soft(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_to, rate, to_idx)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    branch_cont_flow_vio = _PM.var(pm, :branch_cont_flow_vio, i)
+    p_dc_to = _PM.var(pm, n, :p_dcgrid, to_idx)
+
+    #JuMP.@constraint(pm.model, sum(-weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * cut_p_dc_to["$branchdc_id"]  for (branchdc_id, weight_dc) in cut_map_dc) <= rate + branch_cont_flow_vio)
+    #JuMP.@constraint(pm.model, sum(-weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, to_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc) <= rate + branch_cont_flow_vio)
+    #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+
+##################### ##################### ##################### 
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branchdc_flow_cuts, i)
+    branchdc =  _PM.ref(pm, nw, :branchdc, cut.branchdc_id)  ############################
+    branches = _PM.ref(pm, :branch)
+    fr_idx = [(i, branch["f_bus"], branch["t_bus"]) for (i,branch) in branches] 
+    # f_idx = (i, f_bus, t_bus)
+    ploss = _PM.ref(pm, nw, :ploss)
+    ploss_df = _PM.ref(pm, nw, :ploss_df)
+
+    if haskey(branchdc, "rateC")
+        constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from_soft(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], fr_idx, ploss, ploss_df)
+    end
+end
+
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from_soft(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, fr_idx, ploss, ploss_df)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    branchdc_cont_flow_vio = _PM.var(pm, :branchdc_cont_flow_vio, i)
+    # p_dc_fr = _PM.var(pm, n, :p_dcgrid, f_idx)
+
+    # p_fr = _PM.var(pm, n, :p, fr_idx)
+
+    p_fr = _PM.var(pm, n, :branch_p_fr)
+
+    # JuMP.@constraint(pm.model, sum(p_fr[fr_idx[branch_id]] - sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+    JuMP.@constraint(pm.model, sum((p_fr[branch_id] - sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] + ploss_df[bus_id]*ploss)) for (bus_id, weight_ac) in cut_ptdf["$branch_id"])) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate + branchdc_cont_flow_vio)
+   
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) + sum(weight_dc * _PM.var(pm, n, :p_dcgrid, fr_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc) <= rate)
+    #JuMP.@constraint(pm.model, sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+
+
+
+##################### ##################### ##################### 
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to_soft(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+    cut = _PM.ref(pm, :branchdc_flow_cuts, i)
+    branchdc =  _PM.ref(pm, nw, :branchdc, cut.branchdc_id)  ############################
+    branches = _PM.ref(pm, :branch)
+    to_idx = [(i, branch["t_bus"], branch["f_bus"]) for (i,branch) in branches] 
+    # t_idx = (i, t_bus, f_bus)
+    ploss = _PM.ref(pm, nw, :ploss)
+    ploss_df = _PM.ref(pm, nw, :ploss_df)
+    
+    if haskey(branchdc, "rateC")
+        constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to_soft(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], to_idx, ploss, ploss_df)
+    end
+end
+
+function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to_soft(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, to_idx, ploss, ploss_df)
+    bus_injection = _PM.var(pm, :bus_pg)
+    bus_withdrawal = _PM.var(pm, :bus_wdp)
+    branchdc_cont_flow_vio = _PM.var(pm, :branchdc_cont_flow_vio, i)
+    # p_dc_to = _PM.var(pm, n, :p_dcgrid, t_idx)
+
+    # p_to = _PM.var(pm, n, :p, to_idx)
+
+    p_to = _PM.var(pm, n, :branch_p_to)
+    
+    JuMP.@constraint(pm.model, sum((p_to[branch_id] + sum(weight_ac * (bus_injection[bus_id] - (bus_withdrawal[bus_id] + ploss_df[bus_id]*ploss)) for (bus_id, weight_ac) in cut_ptdf["$branch_id"])) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate + branchdc_cont_flow_vio)
+   
+    # JuMP.@constraint(pm.model, -sum(p_to[to_idx[branch_id]] + sum(weight_ac * (bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_ptdf["$branch_id"]) * weight_dc for (branch_id, weight_dc) in cut_idcdf_branchdc) <= rate)
+   
+    #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) - sum(weight_dc * _PM.var(pm, n, :p_dcgrid, to_idx[branchdc_id]) for (branchdc_id, weight_dc) in cut_map_dc)   <= rate)
+    #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
+
+end
+
+
+# constraints for ptdf dcdf cuts not-soft
+
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branch_flow_cuts, i)
     branch =  _PM.ref(pm, nw, :branch, cut.branch_id)
@@ -740,7 +926,7 @@ function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.Abst
         constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_fr, branch["rate_c"], fr_idx)
     end
 end
-""
+
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_fr, rate, fr_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
@@ -757,7 +943,7 @@ function constraint_branch_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.Abst
 end
 
 ##################### ##################### ##################### 
-""
+
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branch_flow_cuts, i)
     branch = _PM.ref(pm, nw, :branch, cut.branch_id)
@@ -769,7 +955,7 @@ function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.Abstra
         constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm, nw, i, cut.ptdf_branch, cut.dcdf_branch, cut.p_dc_to, branch["rate_c"], to_idx)
     end
 end
-""
+
 function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_map_ac, cut_map_dc, cut_p_dc_to, rate, to_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
@@ -780,7 +966,7 @@ function constraint_branch_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.Abstra
     #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
 
 end
-"" 
+ 
 ##################### ##################### ##################### 
 function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branchdc_flow_cuts, i)
@@ -793,7 +979,7 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.Ab
         constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], fr_idx)
     end
 end
-""
+
 function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, fr_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
@@ -812,7 +998,7 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_from(pm::_PM.Ab
 end
 
 
-""
+
 ##################### ##################### ##################### 
 function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
     cut = _PM.ref(pm, :branchdc_flow_cuts, i)
@@ -825,7 +1011,7 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.Abst
         constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm, nw, i, cut.ptdf, cut.idcdf_branchdc, branchdc["rateC"], to_idx)
     end
 end
-""
+
 function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.AbstractPowerModel, n::Int, i::Int, cut_ptdf, cut_idcdf_branchdc, rate, to_idx)
     bus_injection = _PM.var(pm, :bus_pg)
     bus_withdrawal = _PM.var(pm, :bus_wdp)
@@ -843,6 +1029,10 @@ function constraint_branchdc_contingency_ptdf_dcdf_thermal_limit_to(pm::_PM.Abst
     #JuMP.@constraint(pm.model, -sum(weight_ac*(bus_injection[bus_id] - bus_withdrawal[bus_id]) for (bus_id, weight_ac) in cut_map_ac) <= rate)
 
 end
+
+
+
+
 ##################### ##################### ##################### 
 
 "variable controling a linear genetor responce for controller "

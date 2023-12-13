@@ -40,8 +40,7 @@ mpc.gen = [
 ];
 
 %% branch data
-%	fbus	tbus	r	x	b	rateA	rateB	rateC	ratio	angle
-%	status angmin angmax
+%	fbus	tbus	r	x	b	rateA	rateB	rateC	ratio	angle status angmin angmax
 mpc.branch = [
     1   2   0.02    0.06    0.06    100   100   100     0       0       1 -60 60;
     1   3   0.08    0.24    0.05    100   100   100     0       0       1 -60 60;
@@ -92,8 +91,8 @@ mpc.busdc = [
 %column_names%   busdc_i busac_i type_dc type_ac P_g   Q_g islcc  Vtar    rtf xtf  transformer tm   bf filter    rc      xc  reactor   basekVac    Vmmax   Vmmin   Imax    status   LossA LossB  LossCrec LossCinv  droop      Pdcset    Vdcset  dVdcset Pacmax Pacmin Qacmax Qacmin  Vdclow Vdchigh  
 mpc.convdc = [
                 1       2       3       1      -60     -40    0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050                            -15.19180   1.0000   0 100 -100 50 -50        0.98   1.02;
-                2       3       2       1       0       0     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0070                            -21.32695   1.0000   0 100 -100 50 -50        0.98   1.02;
-                3       5       3       1       35      5     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050                             36.31626   0.9944   0 100 -100 50 -50        0.98   1.02;
+                2       3       2       1       0       0     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0005                            -21.32695   1.0000   0 100 -100 50 -50        1.00   1.00;
+                3       5       3       1       35      5     0     1     0.01  0.01 1 1 0.01 1 0.01   0.01 1  345         1.1     0.9     1.1     1       1.103 0.887  2.885    2.885      0.0050                             36.31626   1.0000   0 100 -100 50 -50        0.98   1.02;
 
 ];
 

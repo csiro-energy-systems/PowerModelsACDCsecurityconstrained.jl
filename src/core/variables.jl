@@ -491,3 +491,19 @@ end
 
 #     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :bus, :bs_var, _PM.ids(pm, nw, :bus), bs_var)
 # end
+
+# dc branch violation slack for scopf ptdf dcdf cuts
+function variable_branchdc_contigency_power_violation(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    branchdc_cont_flow_vio = _PM.var(pm, nw)[:branchdc_cont_flow_vio] = JuMP.@variable(pm.model,
+        [i in 1:length(_PM.ref(pm, :branchdc_flow_cuts))], base_name="$(nw)_branchdc_cont_flow_vio",
+        #start = _PM.comp_start_value(ref(pm, nw, :bus, i), "cont_branch_vio_start")
+    )
+
+    if bounded
+        for i in 1:length(_PM.ref(pm, :branchdc_flow_cuts))
+            JuMP.set_lower_bound(branchdc_cont_flow_vio[i], 0.0)
+        end
+    end
+
+    #report && _PM.sol_component_value(pm, nw, :gen, :pg_delta, ids(pm, nw, :gen), pg_delta)
+end

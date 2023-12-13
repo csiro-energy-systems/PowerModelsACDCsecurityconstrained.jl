@@ -10,6 +10,7 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
 
     time_start = time()
     result_scopf = Dict{String,Any}()
+    result_scopf["db"] = Dict{String,Any}()
     solution_mp = Dict()
     network["gen_cont_vio"] = 0.0
     network["branch_cont_vio"] = 0.0
@@ -28,6 +29,8 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     result_scopf["branch_contingencies_unsecure"] = []
     result_scopf["branchdc_contingencies_unsecure"] = []
     result_scopf["convdc_contingencies_unsecure"] = []
+
+
     dominated_contingencies = []
 
     multinetwork = build_ACDC_scopf_multinetwork(network_active)
@@ -47,23 +50,27 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
     for (i,conv) in network_base["convdc"]
         conv["P_g"] = -solution["convdc"][i]["pgrid"]
         conv["Q_g"] = -solution["convdc"][i]["qgrid"]
-        if conv["type_dc"] == 2
-            conv["type_dc"] = 2
-        else
-            conv["type_dc"] = 1
+        conv["Pdcset"] = solution["convdc"][i]["pdc"]
+        conv["Vdcset"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"]
+        if conv["type_dc"] == 3
+            conv["Vdclow"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"]
+            conv["Vdchigh"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"] + 0.04  
         end
-        # conv["Pdcset"] = solution["convdc"][i]["pdc"]
+        result_scopf["db"][i] = Dict("Pdcset" => conv["Pdcset"], "Vdcset" => conv["Vdcset"], "Vdclow" => conv["Vdclow"], "Vdchigh" => conv["Vdchigh"])
     end
+
     for (i,conv) in network_active["convdc"]
         conv["P_g"] = -solution["convdc"][i]["pgrid"]
         conv["Q_g"] = -solution["convdc"][i]["qgrid"]
-        if conv["type_dc"] == 2
-            conv["type_dc"] = 2
-        else
-            conv["type_dc"] = 1
+        conv["Pdcset"] = solution["convdc"][i]["pdc"]
+        conv["Vdcset"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"]
+        if conv["type_dc"] == 3
+            conv["Vdclow"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"]
+            conv["Vdchigh"] = solution["busdc"]["$(conv["busdc_i"])"]["vm"] + 0.04  
         end
-        # conv["Pdcset"] = solution["convdc"][i]["pdc"]
     end
+
+    
     # for (i,shunt) in network_base["shunt"]
     #     if haskey(solution["shunt"], i)
     #         shunt["bs"] = solution["shunt"][i]["bs"]
@@ -209,21 +216,13 @@ function run_ACDC_scopf_contigency_cuts(network::Dict{String,<:Any}, model_type:
             for (i,conv) in network_base["convdc"]
                 conv["P_g"] = -solution["convdc"][i]["pgrid"]
                 conv["Q_g"] = -solution["convdc"][i]["qgrid"]
-                if conv["type_dc"] == 2
-                    conv["type_dc"] = 2
-                else
-                    conv["type_dc"] = 1
-                end
+          
                 # conv["Pdcset"] = solution["convdc"][i]["pdc"]
             end
             for (i,conv) in network_active["convdc"]
                 conv["P_g"] = -solution["convdc"][i]["pgrid"]
                 conv["Q_g"] = -solution["convdc"][i]["qgrid"]
-                if conv["type_dc"] == 2
-                    conv["type_dc"] = 2
-                else
-                    conv["type_dc"] = 1
-                end
+      
                 # conv["Pdcset"] = solution["convdc"][i]["pdc"]
             end
             for (i, branch) in network_base["branch"]

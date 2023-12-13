@@ -28,14 +28,14 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
     p_losses = sum(gen["pg"] for (i,gen) in network_lal["gen"] if gen["gen_status"] != 0) - pd_total
     p_delta = 0.0
     
-    # if p_losses > C1_PG_LOSS_TOL
-    #     load_count = length(load_active)
-    #     p_delta = p_losses/load_count
-    #     for (i,load) in load_active
-    #         load["pd"] += p_delta
-    #     end
-    #     _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
-    # end
+    if p_losses > C1_PG_LOSS_TOL
+        load_count = length(load_active)
+        p_delta = p_losses/load_count
+        for (i,load) in load_active
+            load["pd"] += p_delta
+        end
+        _PMSC.warn(_LOGGER, "ac active power losses found $(p_losses) increasing loads by $(p_delta)")         # Update_GM
+    end
 
     gen_contingencies = _PMSC.calc_c1_gen_contingency_subset(network_lal, gen_eval_limit=gen_eval_limit)
     branch_contingencies = _PMSC.calc_c1_branch_contingency_subset(network_lal, branch_eval_limit=branch_eval_limit)
@@ -101,7 +101,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
         end
 
         try
-            solution =  _PMACDC.run_acdcpf( network_lal, model_type, optimizer, setting = setting)["solution"]
+            solution =  _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer, setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
             ### results_c["c$(cont.label)"] = solution  
         catch exception
@@ -145,7 +145,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
         cont_branch["br_status"] = 0
         _PMACDC.fix_data!(network_lal)
         try
-            solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
+            solution = _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
             ### results_c["c$(cont.label)"] = solution
         catch exception
@@ -190,7 +190,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
         cont_branchdc["status"] = 0                                       # Update_GM
 
         try
-            solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
+            solution = _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
             ### results_c["c$(cont.label)"] = solution
         catch exception
@@ -202,7 +202,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
         ### results_c["vio_c$(cont.label)"] = vio
         #info(_LOGGER, "$(cont.label) violations $(vio)")
         #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
-        if vio.smdc > sm_threshold || vio.smdc > sm_threshold
+        if vio.smdc > sm_threshold || vio.sm > sm_threshold
             _PMSC.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")            # Update_GM
             push!(branchdc_cuts, cont)
             branchdc_cut_vio = vio.pg + vio.qg + vio.sm + vio.smdc
@@ -232,7 +232,7 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
         cont_convdc["status"] = 0                                       # Update_GM
 
         try
-            solution = _PMACDC.run_acdcpf( network_lal, model_type, optimizer; setting = setting)["solution"]
+            solution = _PMACDC.run_acdcpf( network_lal, _PM.ACPPowerModel, optimizer; setting = setting)["solution"]
             _PM.update_data!(network_lal, solution)
             ### results_c["c$(cont.label)"] = solution
         catch exception
@@ -259,12 +259,12 @@ function check_contingency_violations_SI(network, model_type, optimizer, setting
 
     ######################################################################################################################################################
 
-    # if p_delta != 0.0
-    #     _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # Update_GM
-    #     for (i,load) in load_active
-    #         load["pd"] -= p_delta
-    #     end
-    # end
+    if p_delta != 0.0
+        _PMSC.warn(_LOGGER, "re-adjusting ac loads by $(-p_delta)")        # Update_GM
+        for (i,load) in load_active
+            load["pd"] -= p_delta
+        end
+    end
     total_cuts_pre_filter = 0
     time_contingencies = time() - time_contingencies_start
     _PMSC.info(_LOGGER, "contingency eval time: $(time_contingencies)")            # Update_GM
