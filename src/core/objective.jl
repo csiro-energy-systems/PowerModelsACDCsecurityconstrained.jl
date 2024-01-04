@@ -1,3 +1,94 @@
+function objective_min_fuel_cost_scopf(pm::_PM.AbstractPowerModel; kwargs...)
+    model = _PM.check_gen_cost_models(pm)
+
+    if model == 1
+        return objective_min_fuel_cost_scopf_pwl(pm; kwargs...)
+    elseif model == 2
+        return objective_min_fuel_cost_scopf_polynomial(pm; kwargs...)
+    else
+        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+    end
+end
+
+function objective_min_fuel_cost_scopf_pwl(pm::_PM.AbstractPowerModel; kwargs...)
+
+    _PMSC.objective_c1_variable_pg_cost_basecase(pm)
+    
+    pg_cost = _PM.var(pm, 0, :pg_cost)
+
+    return JuMP.@objective(pm.model, Min,
+    sum( pg_cost[i] for (i, gen) in _PM.ref(pm, 0, :gen) ) )
+
+end
+
+
+function objective_min_fuel_cost_scopf_polynomial(pm::_PM.AbstractPowerModel; kwargs...)
+    order = _PM.calc_max_cost_index(pm.data)-1
+
+    if order <= 2
+        return objective_min_fuel_cost_scopf_polynomial_linquad(pm; kwargs...)
+    else
+        return objective_min_fuel_cost_scopf_polynomial_nl(pm; kwargs...)
+    end
+end
+
+
+function objective_min_fuel_cost_scopf_polynomial_linquad(pm::_PM.AbstractPowerModel; report::Bool=true)
+    gen_cost = Dict()
+    for (n, nw_ref) in _PM.nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            pg = sum( _PM.var(pm, n, :pg, i)[c] for c in _PM.conductor_ids(pm, n) )
+
+            if length(gen["cost"]) == 1
+                gen_cost[(n,i)] = gen["cost"][1]
+            elseif length(gen["cost"]) == 2
+                gen_cost[(n,i)] = gen["cost"][1]*pg + gen["cost"][2]
+            elseif length(gen["cost"]) == 3
+                gen_cost[(n,i)] = gen["cost"][1]*pg^2 + gen["cost"][2]*pg + gen["cost"][3]
+            else
+                gen_cost[(n,i)] = 0.0
+            end
+        end
+    end
+
+    return JuMP.@objective(pm.model, Min,
+        sum(
+            sum( gen_cost[(0,i)] for (i,gen) in _PM.ref(pm, 0, :gen) )) )
+end
+
+
+
+function objective_min_fuel_cost_scopf_polynomial_nl(pm::_PM.AbstractPowerModel; report::Bool=true)
+    gen_cost = Dict()
+    for (n, nw_ref) in _PM.nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            pg = sum( _PM.var(pm, n, :pg, i)[c] for c in _PM.conductor_ids(pm, n))
+
+            cost_rev = reverse(gen["cost"])
+            if length(cost_rev) == 1
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1])
+            elseif length(cost_rev) == 2
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg)
+            elseif length(cost_rev) == 3
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg + cost_rev[3]*pg^2)
+            elseif length(cost_rev) >= 4
+                cost_rev_nl = cost_rev[4:end]
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, cost_rev[1] + cost_rev[2]*pg + cost_rev[3]*pg^2 + sum( v*pg^(d+3) for (d,v) in enumerate(cost_rev_nl)) )
+            else
+                gen_cost[(n,i)] = JuMP.@NLexpression(pm.model, 0.0)
+            end
+        end
+    end
+
+    return JuMP.@NLobjective(pm.model, Min,
+        sum(
+            sum( gen_cost[(0,i)] for (i,gen) in _PM.ref(pm, 0, :gen) )) )
+end
+
+
+
+
+
 function objective_min_fuel_cost_scopf_soft(pm::_PM.AbstractPowerModel; kwargs...)
     model = _PM.check_gen_cost_models(pm)
 
