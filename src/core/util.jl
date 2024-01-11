@@ -1756,6 +1756,14 @@ function fix_scopf_data_case5_acdc!(data)
     return data
 end
 
+function fix_scopf_data_case5_2grids_acdc!(data)
+    fix_scopf_data_case5_acdc!(data)
+    data["area_gens"][2] = Set([4, 3])
+    data["gen"]["3"]["alpha"] = 15.92 
+    data["gen"]["4"]["alpha"] = 11.09 
+    return data
+end
+
 
 function fix_scopf_data_case24_3zones_acdc!(data)
 

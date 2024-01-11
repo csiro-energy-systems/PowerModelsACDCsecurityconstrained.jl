@@ -306,11 +306,11 @@ function calc_branch_acdc_ptdf_dcdf_single(data::Dict{String,<:Any}, ref_bus::In
 
     buses = [x.second for x in data["bus"] if (x.second[_PM.pm_component_status["bus"]] != _PM.pm_component_status_inactive["bus"])]
     sort!(buses, by=x->x["index"])
-    if length(ptdf_single) != length(buses)
-        Memento.warn(_LOGGER, "adjusting order of PTDF matrix by 1.")
-        b = _PM.sparse([0])
-        ptdf_single = [ptdf_single b]
-    end
+    # if length(ptdf_single) != length(buses)
+    #     Memento.warn(_LOGGER, "adjusting order of PTDF matrix by 1.")
+    #     b = _PM.sparse([0])
+    #     ptdf_single = [ptdf_single b]
+    # end
 
     # calculate dcdf_branch 
     dcdf_single = - ptdf_single * transpose(inc_matrix_dc)

@@ -171,3 +171,13 @@ function update_data_branch_tap_shift!(data, solution)
     end
     return data
 end
+
+function add_losses_and_loss_distribution_factors!(data)   
+    data["ploss"] = sum(abs(branch["pf"] + branch["pt"]) for (b,branch) in data["branch"] if branch["br_status"] !=0)
+    load_total = sum(load["pd"] for (i,load) in data["load"] if load["status"] != 0)
+    data["ploss_df"] = Dict(bus["index"] => 0.0 for (i,bus) in data["bus"])
+    for (i, load) in data["load"]
+        data["ploss_df"][load["load_bus"]] = load["pd"]/load_total
+    end
+    return data
+end

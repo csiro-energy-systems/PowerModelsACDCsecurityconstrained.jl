@@ -41,8 +41,7 @@ module PowerModelsACDCsecurityconstrained
     include("core/objective.jl")
     include("core/expression_template.jl")
     include("core/split_gen.jl")
-    include("core/util.jl")
-    # include("core/checkscopf.jl") # Temporary to check & verify 
+    include("core/util.jl")    # include("core/checkscopf.jl") # Temporary to check & verify 
 
 
     include("prob/scopf_conts.jl")
@@ -59,6 +58,5 @@ module PowerModelsACDCsecurityconstrained
     include("util/contingency_filter_cuts.jl")
     include("util/contingency_filter_ndc.jl")
     include("util/re_dispatch_algo.jl")
-    include("util/ndc_filter.jl") 
 
 end 

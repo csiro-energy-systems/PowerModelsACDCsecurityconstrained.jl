@@ -25,8 +25,10 @@ minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_sol
 
 
 file = "./test/data/case5_acdc_scopf.m"
+# file = "./test/data/case5_2grids_acdc_sc.m"
 data = _PM.parse_file(file)
 _PMSCACDC.fix_scopf_data_case5_acdc!(data)
+# _PMSCACDC.fix_scopf_data_case5_2grids_acdc!(data)
 _PMACDC.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
 
@@ -49,8 +51,8 @@ for (i, load) in data["load"]
     data["ploss_df"][load["load_bus"]] = load["pd"]/load_total
 end
 
+result = _PMSCACDC.run_scopf_acdc_cuts(data, _PM.ACPPowerModel, _PM.ACPPowerModel, _PMSCACDC.run_acdc_scopf_cuts, nlp_solver, nlp_solver, setting)
 result = _PMSCACDC.run_scopf_acdc_cuts(data, _PM.ACPPowerModel, _PM.ACPPowerModel, _PMSCACDC.run_acdc_scopf_cuts_soft, nlp_solver, nlp_solver, setting)
-
 
 
 
@@ -63,18 +65,4 @@ result = _PMSC.run_c1_scopf_contigency_cuts(data, _PM.ACPPowerModel,nlp_solver)
 
 
 
-
-
-
-# results = PM_acdc_sc.run_acdc_scopf_ptdf_dcdf_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_acdc_scopf_cuts, nlp_solver)
-
-# data_SI = deepcopy(data)
-data_minlp = deepcopy(data)
-
-result_ACDC_scopf_soft_ndc = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations, nlp_solver, setting) 
-
-@time result_ACDC_scopf_soft = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft, PM_acdc_sc.check_contingency_violations_SI, nlp_solver, setting) 
-
-@time result_ACDC_scopf_soft_minlp = PM_acdc_sc.run_ACDC_scopf_contigency_cuts(data_minlp, PM.ACPPowerModel, PM_acdc_sc.run_scopf_soft_minlp, PM_acdc_sc.check_contingency_violations, minlp_solver, setting)
-
-@time result_ACDC_scopf_re_dispatch_oltc_pst = PM_acdc_sc.run_ACDC_scopf_re_dispatch(data, result_ACDC_scopf_soft_ndc, PM.ACPPowerModel, nlp_solver)    
+  

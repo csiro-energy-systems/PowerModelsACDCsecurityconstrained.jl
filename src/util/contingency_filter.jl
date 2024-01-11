@@ -72,7 +72,7 @@ function check_acdc_contingency_violations(network, model_type, optimizer, setti
 
         alpha_gens = [gen["alpha"] for (i,gen) in gen_active]
         if length(alpha_gens) == 0 || isapprox(sum(alpha_gens), 0.0)
-            Memento.warn(_LOGGER, "no available active power response in cont $(cont.label), active gens $(length(alpha_gens))")  # Update_GM
+            Memento.warn(_LOGGER, "no available active power response in cont $(cont.label), active gens $(length(alpha_gens))")  
             continue
         end
 
@@ -107,8 +107,8 @@ function check_acdc_contingency_violations(network, model_type, optimizer, setti
 
         vio = calc_violations(network_lal, network_lal)            
         
-        #Memento.info(_LOGGER, "$(cont.label) violations $(vio)")
-        #if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
+        # Memento.info(_LOGGER, "$(cont.label) violations $(vio)")
+        # if vio.vm > vm_threshold || vio.pg > pg_threshold || vio.qg > qg_threshold || vio.sm > sm_threshold || vio.smdc > sm_threshold
         if vio.sm > sm_threshold || vio.smdc > sm_threshold
             Memento.info(_LOGGER, "adding contingency $(cont.label) due to constraint violations $(vio)")           
             push!(gen_cuts, cont)
@@ -290,7 +290,7 @@ end
 
 
 
-function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
+function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:Any}; return_vio_data::Bool=false, vm_digits=3, rate_key="rate_c", rate_keydc="rateC")
     
     vio_data = Dict()
     vio_data["genp"] = Dict()
@@ -476,6 +476,10 @@ function calc_violations(network::Dict{String,<:Any}, solution::Dict{String,<:An
             end
         end
     end
-    # return (vm=vm_vio, pg=pg_vio, qg=qg_vio, sm=sm_vio, smdc=smdc_vio, cmac=convdc_sm_vio, cmdc=convdc_smdc_vio, vio_data)
-    return (vm=vm_vio, pg=pg_vio, qg=qg_vio, sm=sm_vio, smdc=smdc_vio, cmac=convdc_sm_vio, cmdc=convdc_smdc_vio)
+
+    if return_vio_data
+        return (vm=vm_vio, pg=pg_vio, qg=qg_vio, sm=sm_vio, smdc=smdc_vio, cmac=convdc_sm_vio, cmdc=convdc_smdc_vio, vio_data)
+    else
+        return (vm=vm_vio, pg=pg_vio, qg=qg_vio, sm=sm_vio, smdc=smdc_vio, cmac=convdc_sm_vio, cmdc=convdc_smdc_vio)
+    end
 end
