@@ -1,0 +1,334 @@
+{
+    "generators": [
+        {
+            "cost": [
+                {
+                    "x": 37.9649606792,
+                    "y": 9706.86274447
+                },
+                {
+                    "x": 61.0183080017,
+                    "y": 17694.7514191
+                },
+                {
+                    "x": 84.0716553241,
+                    "y": 27895.9312878
+                },
+                {
+                    "x": 107.125002647,
+                    "y": 40310.4023504
+                },
+                {
+                    "x": 130.178349969,
+                    "y": 54938.1646069
+                },
+                {
+                    "x": 153.231697292,
+                    "y": 71779.2180574
+                },
+                {
+                    "x": 176.285044614,
+                    "y": 90833.5627019
+                },
+                {
+                    "x": 199.338391936,
+                    "y": 112101.19854
+                },
+                {
+                    "x": 222.391739259,
+                    "y": 135582.125573
+                },
+                {
+                    "x": 245.445086581,
+                    "y": 161276.343799
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 0,
+                            "y": 0
+                        },
+                        {
+                            "x": 200,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 250,
+                        "upperLimit": 250,
+                        "maxAvailability": 250
+                    }
+                },
+                "fcas_reg_raise": {
+                    "cost": [
+                        {
+                            "x": 0,
+                            "y": 0
+                        },
+                        {
+                            "x": 200,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        },
+        {
+            "cost": [
+                {
+                    "x": 37.9649606792,
+                    "y": 8000
+                },
+                {
+                    "x": 61.0183080017,
+                    "y": 12368.10048
+                },
+                {
+                    "x": 84.0716553241,
+                    "y": 23574.79686
+                },
+                {
+                    "x": 107.125002647,
+                    "y": 38465.8995
+                },
+                {
+                    "x": 130.178349969,
+                    "y": 57212.20276
+                },
+                {
+                    "x": 153.231697292,
+                    "y": 79957.98279
+                },
+                {
+                    "x": 176.285044614,
+                    "y": 106828.5591
+                },
+                {
+                    "x": 199.338391936,
+                    "y": 137934.7988
+                },
+                {
+                    "x": 222.391739259,
+                    "y": 173376.1313
+                },
+                {
+                    "x": 245.445086581,
+                    "y": 213242.6936
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 0,
+                            "y": 0
+                        },
+                        {
+                            "x": 300,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 300,
+                        "upperLimit": 300,
+                        "maxAvailability": 250
+                    }
+                },
+                "fcas_reg_raise": {
+                    "cost": [
+                        {
+                            "x": 0,
+                            "y": 0
+                        },
+                        {
+                            "x": 200,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        }
+    ],
+    "loads": [
+        {
+            "pmin": 10,
+            "pmax": 1000,
+            "qmin": -500,
+            "qmax": 500,
+            "cost": [
+                {
+                    "x": 10,
+                    "y": 200000
+                },
+                {
+                    "x": 100,
+                    "y": 200000
+                },
+                {
+                    "x": 200,
+                    "y": 150000
+                },
+                {
+                    "x": 300,
+                    "y": 50000
+                },
+                {
+                    "x": 1000,
+                    "y": 0
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 10,
+                            "y": 1000
+                        },
+                        {
+                            "x": 1000,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        },
+        {
+            "pmin": 10,
+            "pmax": 1000,
+            "qmin": -500,
+            "qmax": 500,
+            "cost": [
+                {
+                    "x": 10,
+                    "y": 150000
+                },
+                {
+                    "x": 1000,
+                    "y": 0
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 10,
+                            "y": 1000
+                        },
+                        {
+                            "x": 1000,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        },
+        {
+            "pmin": 10,
+            "pmax": 1000,
+            "qmin": -500,
+            "qmax": 500,
+            "cost": [
+                {
+                    "x": 10,
+                    "y": 175000
+                },
+                {
+                    "x": 1000,
+                    "y": 0
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 10,
+                            "y": 1000
+                        },
+                        {
+                            "x": 1000,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        },
+        {
+            "pmin": 10,
+            "pmax": 1000,
+            "qmin": -500,
+            "qmax": 500,
+            "cost": [
+                {
+                    "x": 10,
+                    "y": 200000
+                },
+                {
+                    "x": 1000,
+                    "y": 0
+                }
+            ],
+            "fcas": {
+                "fcas_reg_lower": {
+                    "cost": [
+                        {
+                            "x": 10,
+                            "y": 1000
+                        },
+                        {
+                            "x": 1000,
+                            "y": 2000
+                        }
+                    ],
+                    "bid": {
+                        "lowerLimit": 20,
+                        "lowerBreakpoint": 40,
+                        "upperBreakpoint": 160,
+                        "upperLimit": 200,
+                        "maxAvailability": 250
+                    }
+                }
+            }
+        }
+    ]
+}
