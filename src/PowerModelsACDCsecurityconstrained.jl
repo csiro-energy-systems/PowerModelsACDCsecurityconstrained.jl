@@ -1,5 +1,6 @@
 module PowerModelsACDCsecurityconstrained
 
+    using Ipopt    
     import JuMP
     import PowerModels
     # import StochasticPowerModels
@@ -11,6 +12,11 @@ module PowerModelsACDCsecurityconstrained
     import Distributed
     # import PolyChaos
     # import KernelDensity
+    using CSV
+    using PlotlyJS
+    using Dates
+    using DataFrames
+    using DataFramesMeta
     
 
     const _PM = PowerModels
@@ -31,6 +37,7 @@ module PowerModelsACDCsecurityconstrained
     # NOTE: If this line is not included then the precompiled `_PM._LOGGER` won't be registered at runtime.
     __init__() = Memento.register(_LOGGER)
 
+    include("./core/types.jl")
     include("core/variables.jl")
 
 
@@ -81,4 +88,14 @@ module PowerModelsACDCsecurityconstrained
    
     include("utils/split_gen.jl")
 
+    include("./core/solution.jl")
+    include("./core/data.jl")
+    include("./core/utils.jl")
+    include("./core/main.jl")
+
+    include("./data/nem.jl")
+    include("./data/mlf.jl")
+
+    include("./vis/cost.jl")
+    include("./vis/plots.jl")
 end # module
