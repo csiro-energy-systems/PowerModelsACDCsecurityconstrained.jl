@@ -508,9 +508,9 @@ function constraint_power_balance_ac(pm::_PM.AbstractPowerModel, i::Int; nw::Int
     bus_gs = Dict(k => _PM.ref(pm, nw, :shunt, k, "gs") for k in bus_shunts)
     bus_bs = Dict(k => _PM.ref(pm, nw, :shunt, k, "bs") for k in bus_shunts)
 
-    constraint_power_balance_ac(pm, nw, i, bus_arcs, bus_gens, bus_convs_ac, bus_pd, bus_qd, bus_gs, bus_bs)
+    constraint_power_balance_ac(pm, nw, i, bus_arcs, bus_gens, bus_convs_ac, bus_loads, bus_shunts, bus_pd, bus_qd, bus_gs, bus_bs)
 end
-function constraint_power_balance_ac(pm::_PM.AbstractACRModel, n::Int, i::Int, bus_arcs, bus_gens, bus_convs_ac, bus_pd, bus_qd, bus_gs, bus_bs)
+function constraint_power_balance_ac(pm::_PM.AbstractACRModel, n::Int, i::Int, bus_arcs, bus_gens, bus_convs_ac, bus_loads, bus_shunts, bus_pd, bus_qd, bus_gs, bus_bs)
     vr = _PM.var(pm, n, :vr, i)
     vi = _PM.var(pm, n, :vi, i)
     p    = _PM.var(pm, n, :p)
