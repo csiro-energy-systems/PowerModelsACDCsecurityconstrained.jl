@@ -219,7 +219,19 @@ function variable_converter_droop_binary(pm::_PM.AbstractPowerModel; nw::Int=_PM
     report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :convdc, :xd_e, _PM.ids(pm, nw, :convdc), xd_e)
 end
 
-
+function variable_area_frequency(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, bounded::Bool=true, report::Bool=true)
+    fa = _PM.var(pm, nw)[:fa] = JuMP.@variable(pm.model,
+        [i in 1:length(_PM.ref(pm, nw, :areas))], base_name="$(nw)_fa",
+    )
+    
+    if bounded
+        for i in 1:length(_PM.ref(pm, nw, :areas))
+            JuMP.set_lower_bound(fa[i], _PM.ref(pm, nw, :frq)["fmin"])   
+            JuMP.set_upper_bound(fa[i], _PM.ref(pm, nw, :frq)["fmax"])
+        end
+    end
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :areas, :fa, _PM.ids(pm, nw, :areas), fa)
+end
 
 # function variable_c1_voltage_response(pm::_PM.AbstractPowerModel; kwargs...)
 #     variable_c1_voltage_response_positive(pm::_PM.AbstractPowerModel; kwargs...)
@@ -514,5 +526,5 @@ function variable_branchdc_contigency_power_violation(pm::_PM.AbstractPowerModel
         end
     end
 
-    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branchdc_flow_cuts, :branchdc_cont_flow_vio, _PM.ids(pm, nw, :branchdc_flow_cuts), :branchdc_cont_flow_vio)
+    report && _IM.sol_component_value(pm, _PM.pm_it_sym, nw, :branchdc_flow_vio, :branchdc_cont_flow_vio, _PM.ids(pm, nw, :branchdc_flow_cuts), branchdc_cont_flow_vio)
 end

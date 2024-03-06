@@ -1,7 +1,7 @@
 
 
 function check_acdc_contingency_branch_power(network, model_type, optimizer, setting;
-        gen_flow_cut_limit=10, branch_flow_cut_limit=10, branchdc_flow_cut_limit=10, total_cut_limit=typemax(Int64),
+        gen_flow_cut_limit=100, branch_flow_cut_limit=100, branchdc_flow_cut_limit=100, total_cut_limit=typemax(Int64),
         gen_eval_limit=typemax(Int64), branch_eval_limit=typemax(Int64), branchdc_eval_limit=typemax(Int64), 
         sm_threshold=0.01, gen_flow_cuts=[], branch_flow_cuts=[], branchdc_flow_cuts=[])     
 

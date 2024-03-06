@@ -396,7 +396,33 @@ function constraint_pvdc_droop_control_milp(pm::_PM.AbstractACPModel, n::Int, i:
     JuMP.@constraint(pm.model, vdc <= (vdcmax - epsilon) * xd_b + vdchigh * xd_c + (vdclow - epsilon) * xd_d + vdcmin * xd_e)
 end
 
+# function constraint_pf_droop_control_linear(pm::_PM.AbstractPowerModel, i::Int; nw::Int=_PM.nw_id_default)
+#     conv = _PM.ref(pm, nw, :convdc, i)
+#     ΔP = - _PM.var(pm, 0, :pconv_ac, i)
+#     gens =  _PM.ref(pm, nw, :gen)
+#     H_area = Dict()
+#     for (a, agens) in area_gens
+#         H_area[a] = sum(gen["H"] for (g, gen) in gens if g in agens)
+#     end
+#     bus_id = conv["busac_i"]
+#     conv_area = _PM.ref(pm, nw, :bus, bus_id)["area"]
+#     rocof = ΔP/(2*H_area[conv_area])
+#     f_droop = _PM.ref(pm, nw, :frq, droop)
+#     f0 = _PM.ref(pm, nw, :frq, f0)
+   
+#     if conv["type_dc"] == 3
+#         if conv["pr_control"] == 1
+#             constraint_pf_droop_control_linear(pm, nw, i, conv["busac_i"], ΔP, f0, f_droop, rocof, conv_area, H_area[conv_area])
+#         end
+#     end 
+# end
 
+# function constraint_pf_droop_control_linear(pm::_PM.AbstractACPModel, n::Int, i::Int, busac_i, pconv_ac_ref, f0, k_droop, rocof, conv_area, H_area)
+#     pconv_ac = _PM.var(pm, n, :pconv_ac, i)
+#     fa = _PM.var(pm, n, :fa, conv_area)
+
+#     JuMP.@constraint(pm.model, pconv_ac == pconv_ac_ref - sign(pconv_ac_ref) * 1 / k_droop * (fa - f0)) - 2*H_area*rocof
+# end
 
 
 

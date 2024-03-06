@@ -9,43 +9,79 @@ using PowerModelsACDCsecurityconstrained
 const _PM = PowerModels
 const _PMACDC = PowerModelsACDC
 const _PMSC = PowerModelsSecurityConstrained
-const _PMACDCSC = PowerModelsACDCsecurityconstrained
+const _PMSCACDC = PowerModelsACDCsecurityconstrained
 
 
 nlp_solver = optimizer_with_attributes(Ipopt.Optimizer, "print_level"=>0, "constr_viol_tol" => 0.000001) 
 
 
-
-file = "./data/case5_acdc.m"
-file = "./data/snem2000_acdc.m"
+# file = "./test/data/case5_acdc_scopf.m"
+file = "./test/data/case5_2grids_acdc_sc.m"
 data = _PM.parse_file(file)
-_PMACDCSC.fix_scopf_data_case5_acdc!(data)
+# _PMSCACDC.fix_scopf_data_case5_acdc!(data)
+_PMSCACDC.fix_scopf_data_case5_2grids_acdc!(data)
 _PMACDC.process_additional_data!(data)
 setting = Dict("output" => Dict("branch_flows" => true), "conv_losses_mp" => true) 
 
-result = _PMACDC.run_sacdcpf(data)
-result = _PMACDC.run_acdcpf(data, _PM.ACPPowerModel, nlp_solver, setting = setting)
+# result = _PMACDC.run_sacdcpf(data)
+# result = _PMACDC.run_acdcpf(data, _PM.ACPPowerModel, nlp_solver, setting = setting)
 
-data["branch"]["1"]["rate_a"] = data["branch"]["1"]["rate_b"] = data["branch"]["1"]["rate_c"] = 0.3;
-data["branch"]["2"]["rate_a"] = data["branch"]["2"]["rate_b"] = data["branch"]["2"]["rate_c"] = 0.35;
-data["branch"]["5"]["rate_a"] = data["branch"]["5"]["rate_b"] = data["branch"]["5"]["rate_c"] = 0.3;
+# data["branch"]["1"]["rate_a"] = data["branch"]["1"]["rate_b"] = data["branch"]["1"]["rate_c"] = 0.3;
+# data["branch"]["2"]["rate_a"] = data["branch"]["2"]["rate_b"] = data["branch"]["2"]["rate_c"] = 0.35;
+# data["branch"]["5"]["rate_a"] = data["branch"]["5"]["rate_b"] = data["branch"]["5"]["rate_c"] = 0.3;
 
-data["branchdc"]["1"]["rateA"] = data["branchdc"]["1"]["rateB"] = data["branchdc"]["1"]["rateC"] = 50;
-data["branchdc"]["2"]["rateA"] = data["branchdc"]["2"]["rateB"] = data["branchdc"]["2"]["rateC"] = 50;
-data["branchdc"]["3"]["rateA"] = data["branchdc"]["3"]["rateB"] = data["branchdc"]["3"]["rateC"] = 50;
+# data["branchdc"]["1"]["rateA"] = data["branchdc"]["1"]["rateB"] = data["branchdc"]["1"]["rateC"] = 50;
+# data["branchdc"]["2"]["rateA"] = data["branchdc"]["2"]["rateB"] = data["branchdc"]["2"]["rateC"] = 50;
+# data["branchdc"]["3"]["rateA"] = data["branchdc"]["3"]["rateB"] = data["branchdc"]["3"]["rateC"] = 50;
 
-data["gen_contingencies"] = []
-data["branch_contingencies"] = []
-# data["convdc_contingencies"] = [] 
+# data["gen_contingencies"] = []
+# data["branch_contingencies"] = []
+data["frq"] = Dict{String, Any}("fmin" => 49.0, "fmax" => 51.0, "fdb" => 0.015, "f0" => 50, "droop" => 0.05) 
+data["gen"]["1"]["H"] = data["gen"]["3"]["H"] = 4
+data["gen"]["2"]["H"] = data["gen"]["4"]["H"] = 3
 
-for (i, conv) in data["convdc"]
-    conv["ep"] = 0.1
-end
+result = _PMSCACDC.run_scopf_acdc_contingencies(data, _PM.ACPPowerModel, _PM.ACPPowerModel, _PMSCACDC.run_scopf_soft, nlp_solver, nlp_solver, setting)
+
+# H = 3
+# F = 0.89779
+# R = 5
+# D = 2
+# K = 300
+# Tr = 0.15
+# delta_p = 0.1
+
+# Fr = (K * F/R)
+# Rr = (K/R)
+# wn = sqrt( (1/2*H*Tr) * (D + Rr) )
+# eta = 0.5 * ( (2*H + Tr*(D + Fr))/(sqrt(2*H*Tr*(D + Rr))) )
+
+# tmax = 1/(wn*sqrt(1-eta^2)) * atan( (wn*sqrt(1-eta^2))/(eta*wn - (1/Tr)) )
+# delta_f_tmx(delta_p) = delta_p/(Rr + D) * ( 1 + exp(-eta*wn*tmax) * sqrt( ( ( Tr*(Rr -Fr)) /2H) ) )
 
 
-result_scopf_droop_linear = _PMACDCSC.run_ACDC_scopf_contigency_cuts(data, _PM.ACPPowerModel, _PMACDCSC.run_scopf_soft, _PMACDCSC.check_contingency_violations_SI, nlp_solver, setting) 
-result_scopf_droop_smooth = _PMACDCSC.run_ACDC_scopf_contigency_cuts(data, _PM.ACPPowerModel, _PMACDCSC.run_scopf_soft, _PMACDCSC.check_contingency_violations_SI, nlp_solver, setting) 
+delta_p = 0.5
+gamma = 2/3
+m = 3
+d = 2
+Ng = 2
+beta_2i = 0.88
+beta_2b = 2.5
+lembda_2 = 0.25
+delta_t = 0.1
+m_total = 3+4
 
+delta_f = delta_p/(2*m_total)
+
+rocof1(t) =  delta_p * exp(-gamma*t) * (1 - exp(-gamma*delta_t)) / (2*Ng*pi*gamma*m*delta_t) 
+
+rocof2(t) = [ delta_p * exp(-gamma*t) * (1 - exp(-gamma*delta_t)) / (2*Ng*pi*gamma*m*delta_t) ] + [ delta_p * exp(-gamma*(t/2)) / (2*pi*m) ] *
+[(beta_2i*beta_2b)/(sqrt(lembda_2/m - ((gamma^2)/4))*(delta_t))] *[exp(-gamma*delta_t/2) *sin(sqrt(lembda_2/m - ((gamma^2)/4))*(t+delta_t)) -
+sin(sqrt(lembda_2/m - ((gamma^2)/4))*t)]
+
+
+plot(rocof1, 0, 2)
+
+plot(delta_f_tmx, -10, 10)
 
 
 using Plots

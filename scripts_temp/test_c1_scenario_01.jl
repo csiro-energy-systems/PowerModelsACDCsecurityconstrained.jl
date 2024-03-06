@@ -24,9 +24,9 @@ mip_solver = optimizer_with_attributes(HiGHS.Optimizer, "output_flag"=>false)
 minlp_solver = optimizer_with_attributes(Juniper.Optimizer, "nl_solver"=>nlp_solver, "mip_solver"=>mip_solver)
 
 
-c1_ini_file = "./data/c1/inputfiles.ini"
-c1_scenarios = "scenario_01"  #, "scenario_02"]
-c1_cases = parse_c1_case(c1_ini_file,scenario_id=c1_scenarios)
+c1_ini_file = "./test/data/c1/inputfiles.ini"
+c1_scenarios = "scenario_02"  #, "scenario_02"]
+c1_cases = _PMSC.parse_c1_case(c1_ini_file,scenario_id=c1_scenarios)
 data = build_c1_pm_model(c1_cases)
 
 
