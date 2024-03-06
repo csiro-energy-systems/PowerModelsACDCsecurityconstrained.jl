@@ -40,6 +40,7 @@ module PowerModelsACDCsecurityconstrained
     include("core/data.jl")
     include("core/objective.jl")
     include("core/expression_template.jl")
+    include("core/expression.jl")
 
 
 

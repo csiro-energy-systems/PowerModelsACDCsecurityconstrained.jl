@@ -55,7 +55,7 @@ Distributed.addprocs(node_processes, topology=:master_worker)
     _PMSCACDC.silence()
 end
 
-file = "./test/data/snem2000_acdc.m"
+file = "./test/data/matpower/snem2000_acdc.m"
 data = parse_file(file)
 _PMSCACDC.fix_scopf_data_issues!(data)
 
