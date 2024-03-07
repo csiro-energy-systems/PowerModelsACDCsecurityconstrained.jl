@@ -10,6 +10,8 @@ module PowerModelsACDCsecurityconstrained
     import InfrastructureModels
     import Distributed
 
+    # using PlotlyJS
+
     
     const _PM = PowerModels
     const _PMSC = PowerModelsSecurityConstrained
@@ -33,7 +35,7 @@ module PowerModelsACDCsecurityconstrained
         Memento.setlevel!(Memento.getlogger(PowerModelsSecurityConstrained), "error")
     end
 
-
+    include("core/types.jl")
     include("core/variable.jl")
     include("core/constraint_template.jl")
     include("core/constraint.jl")
@@ -41,7 +43,7 @@ module PowerModelsACDCsecurityconstrained
     include("core/objective.jl")
     include("core/expression_template.jl")
     include("core/expression.jl")
-
+    
 
 
     include("prob/scopf_conts.jl")
@@ -49,6 +51,7 @@ module PowerModelsACDCsecurityconstrained
     include("prob/re_dispatch.jl")
     include("prob/uc.jl")
     include("prob/opf.jl")  
+    include("prob/opfcas_market.jl")
   
     
     include("util/scopf_cuts_iterative.jl")
@@ -57,6 +60,9 @@ module PowerModelsACDCsecurityconstrained
     include("util/contingency_filter_cuts.jl")
     include("util/contingency_filter_ndc.jl")
     include("util/re_dispatch_algo.jl")
+
+    include("vis/cost.jl")
+    include("vis/plots.jl")
 
 
 end 
