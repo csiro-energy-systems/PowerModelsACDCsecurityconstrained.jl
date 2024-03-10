@@ -1,7 +1,7 @@
 # PowerModelsACDCsecurityconstrained (PMACDCsc)
 
 
-PMACDCsc is a Julia/JuMP package for steady-state security-constrained optimization problems for hybrid AC-DC grids. PMACDCsc extends [PowerModelsSecurityConstrained.jl](https://github.com/lanl-ansi/PowerModelsSecurityConstrained.jl) to the features of [PowerModelsACDC.jl](https://github.com/Electa-Git/PowerModelsACDC.jl). The code is engineered to address the problem specifications such as:
+PMACDCsc is a Julia/JuMP package for steady-state security-constrained optimization problems for hybrid AC/DC grids. PMACDCsc extends [PowerModelsSecurityConstrained.jl](https://github.com/lanl-ansi/PowerModelsSecurityConstrained.jl) to the features of [PowerModelsACDC.jl](https://github.com/Electa-Git/PowerModelsACDC.jl). The code is engineered to address the problem specifications such as:
 
 * Security-constrained optimal power flow (SCOPF); 
 * Security-constrained unit commitment (SCUC);
@@ -45,6 +45,9 @@ Make sure that your Julia registry is up to date. To detect and download the lat
 
 ## SCOPF implimentations
 
+PMACDCsc provides several SCOPF formulations conforming to the ARPA-e GOC Challenge 1 specifications for hybrid AC/DC grids, which are given as follows.
+ 
+
 Two-stage mathematical programming model (TSMP): complete base and contingency case models:
 
 ```julia
@@ -74,7 +77,7 @@ TSMP model: complete base and contingency case models with soft constraints, pen
 run_scopf_acdc_contingencies(data, scopf_formulation, filter_formulation, run_scopf_soft_minlp, minlp_scopf_solver, filter_solver, setting)
 ```
 
-Decomposition based model conforming to the ARPA-e SCOPF Challenge 1 Benchmark heuristic developed in [PowerModelsSecurityConstrained.jl](https://github.com/lanl-ansi/PowerModelsSecurityConstrained.jl), which is extended to include AC/DC converter station and DC grid models. The contingency case branch flow constraints are enforced by PTDF and DCDF cuts and penalized based on a conservative linear
+Decomposition based model conforming to the ARPA-e GOC Challenge 1 Benchmark heuristic developed in [PowerModelsSecurityConstrained.jl](https://github.com/lanl-ansi/PowerModelsSecurityConstrained.jl), which is extended to include AC/DC converter station and DC grid models. The contingency case branch flow constraints are enforced by PTDF and DCDF cuts and penalized based on a conservative linear
 approximation of the formulation's specification.
 
 
@@ -110,7 +113,7 @@ If you find PMACDCsc useful in your work, we kindly request that you cite the fo
   booktitle = {2024 Power Systems Computation Conference (PSCC)},
   year = {2024},
   month = {June},
-  pages = {1-8}, 
+  pages = {1-10}, 
   doi = {10.XXXXX/PSCC.2024.XXXXXXX}
 }
 ```
