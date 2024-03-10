@@ -45,8 +45,8 @@ Make sure that your Julia registry is up to date. To detect and download the lat
 
 ## SCOPF implimentations
 
-PMACDCsc provides several SCOPF formulations conforming to the ARPA-e GOC Challenge 1 specifications for hybrid AC/DC grids, which are given as follows.
- 
+PMACDCsc provides several SCOPF formulations conforming to the ARPA-e GOC Challenge 1 specifications extended for hybrid AC/DC grids, which are given as follows.
+
 
 Two-stage mathematical programming model (TSMP): complete base and contingency case models:
 
