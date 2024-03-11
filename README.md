@@ -101,6 +101,7 @@ Several scripts are provided to showcase how effectively PMACDCsc solves the rea
 * The `src/nem` directory provides the AC/DC OPFCAS for the Australian NEM. 
 * The `scripts` directory provides the MLF calculation huiristic for the Australian NEM.
 
+The Australian NEM datasets are available at [Synthetic-NEM-2000bus-Data](https://github.com/csiro-energy-systems/Synthetic-NEM-2000bus-Data).
 
 
 ## Citing PMACDCsc
