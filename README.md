@@ -106,16 +106,18 @@ The Australian NEM datasets are available at [Synthetic-NEM-2000bus-Data](https:
 
 ## Citing PMACDCsc
 
-If you find PMACDCsc useful in your work, we kindly request that you cite the following publication [PMACDCsc](https://ieeexplore.ieee.org/):
+If you find PMACDCsc useful in your work, we kindly request that you cite the following publication [PMACDCsc](https://www.sciencedirect.com/science/article/pii/S0378779624006709):
 ```
-@inproceedings{PMACDCsc,
-  author = {Mohy-ud-din, Ghulam and Heidari, Rahmat and Ergun, Hakan and Geth, Frederik},
-  title = {AC-DC Security-Constrained Optimal Power Flow for the Australian National Electricity Market},
-  booktitle = {2024 Power Systems Computation Conference (PSCC)},
-  year = {2024},
-  month = {June},
-  pages = {1-10}, 
-  doi = {10.XXXXX/PSCC.2024.XXXXXXX}
+@article{PMACDCsc,
+title = {AC–DC security-constrained optimal power flow for the Australian National Electricity Market},
+journal = {Electric Power Systems Research},
+volume = {234},
+pages = {110784},
+year = {2024},
+issn = {0378-7796},
+doi = {https://doi.org/10.1016/j.epsr.2024.110784},
+url = {https://www.sciencedirect.com/science/article/pii/S0378779624006709},
+author = {Ghulam Mohy-ud-din and Rahmat Heidari and Hakan Ergun and Frederik Geth}
 }
 ```
 
