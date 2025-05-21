@@ -1,5 +1,5 @@
 function objective_min_fuel_cost_scopf(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_min_fuel_cost_scopf_pwl(pm; kwargs...)
@@ -90,7 +90,7 @@ end
 
 
 function objective_min_fuel_cost_scopf_soft(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_min_fuel_cost_scopf_soft_pwl(pm; kwargs...)
@@ -591,7 +591,7 @@ end
 # objective for ac-dc scopf with ptdf and dcdf cuts
 
 function objective_min_fuel_cost_scopf_cuts(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_min_fuel_cost_scopf_cuts_pwl(pm; kwargs...)
@@ -681,7 +681,7 @@ end
 # objective for ac-dc scopf with ptdf and dcdf cuts soft
 
 function objective_min_fuel_cost_scopf_cuts_soft(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_min_fuel_cost_scopf_cuts_soft_pwl(pm; kwargs...)
@@ -802,7 +802,7 @@ end
 # FCAS
 
 function objective_min_cost(pm::_PM.AbstractPowerModel; kwargs...)
-    model = _PM.check_gen_cost_models(pm)
+    model = check_gen_cost_models(pm)
 
     if model == 1
         return objective_pwl(pm; kwargs...)
@@ -825,4 +825,97 @@ function objective_pwl(pm::_PM.AbstractPowerModel; kwargs...)
             sum( _PM.var(pm, n, :pd_cost, i) for (i,load) in get_dispatchable_participants(nw_ref[:load]))
        for (n, nw_ref) in _PM.nws(pm))
     )
+end
+
+
+function objective_min_fuel_cost_mn_scopf_soft(pm::_PM.AbstractPowerModel; kwargs...)
+    model = check_gen_cost_models(pm)
+
+    if model == 1
+        return objective_min_fuel_cost_mn_scopf_soft_pwl(pm; kwargs...)
+    elseif model == 2
+        return objective_min_fuel_cost_mn_scopf_soft_polynomial(pm; kwargs...)
+    else
+        Memento.error(_LOGGER, "Only cost models of types 1 and 2 are supported at this time, given cost model type of $(model)")
+    end
+end
+
+function objective_min_fuel_cost_mn_scopf_soft_pwl(pm::_PM.AbstractPowerModel; kwargs...)
+
+
+    return JuMP.@objective(pm.model, Min,
+    sum(
+    sum( _PM.var(pm, nh, :pg_cost, i) for (i, gen) in _PM.ref(pm, nh, :gen) ) for nh in pm.ref[:it][:pm][:hour_ids] ) +
+    sum(
+        sum( 5E5*_PM.var(pm, n, :bf_vio_fr, i) for i in _PM.ids(pm, n, :branch) ) +
+        sum( 5E5*_PM.var(pm, n, :bf_vio_to, i) for i in _PM.ids(pm, n, :branch) ) + 
+        sum( 5E5*_PM.var(pm, n, :bdcf_vio_fr, i) for i in _PM.ids(pm, n, :branchdc) ) +
+        sum( 5E5*_PM.var(pm, n, :bdcf_vio_to, i) for i in _PM.ids(pm, n, :branchdc) ) +
+        sum( 5E5*_PM.var(pm, n, :pb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+        sum( 5E5*_PM.var(pm, n, :pb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+        sum( 5E5*_PM.var(pm, n, :qb_ac_pos_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+        sum( 5E5*_PM.var(pm, n, :qb_ac_neg_vio, i) for i in _PM.ids(pm, n, :bus) ) +
+        sum( 5E5*_PM.var(pm, n, :pb_dc_pos_vio, i) for i in _PM.ids(pm, n, :busdc) ) +
+        sum( 5E5*_PM.var(pm, n, :i_conv_vio, i) for i in _PM.ids(pm, n, :convdc) ) 
+        for (n, nw_ref) in _PM.nws(pm) )
+    )
+
+end
+
+
+function objective_variable_pg_cost_pwl(pm::_PM.AbstractPowerModel; nw::Int=_PM.nw_id_default, report::Bool=true)
+    pg_cost = _PM.var(pm, nw)[:pg_cost] = Dict{Int,Any}()
+
+    for (i,gen) in _PM.ref(pm, nw, :gen)
+        pg_vars = [_PM.var(pm, nw, :pg, i)[c] for c in _PM.conductor_ids(pm, nw)]
+        pmin = sum(JuMP.lower_bound.(pg_vars))
+        pmax = sum(JuMP.upper_bound.(pg_vars))
+
+        # note pmin/pmax may be different from gen["pmin"]/gen["pmax"] in the on/off case
+        points = _PM.calc_pwl_points(gen["ncost"], gen["cost"], pmin, pmax)
+
+        pg_cost_lambda = JuMP.@variable(pm.model,
+            [i in 1:length(points)], base_name="$(nw)_pg_cost_lambda",
+            lower_bound = 0.0,
+            upper_bound = 1.0
+        )
+        JuMP.@constraint(pm.model, sum(pg_cost_lambda) == 1.0)
+
+        pg_expr = 0.0
+        pg_cost_expr = 0.0
+        for (i,point) in enumerate(points)
+            pg_expr += point.mw*pg_cost_lambda[i]
+            pg_cost_expr += point.cost*pg_cost_lambda[i]
+        end
+        JuMP.@constraint(pm.model, pg_expr == sum(pg_vars))
+        pg_cost[i] = pg_cost_expr
+    end
+
+    report && _PM.sol_component_value(pm, nw, :gen, :pg_cost, _PM.ids(pm, nw, :gen), pg_cost)
+end
+
+
+"""
+Checks that all generator cost models are of the same type
+"""
+function check_gen_cost_models(pm::_PM.AbstractPowerModel)
+    model = nothing
+
+    for (n, nw_ref) in _PM.nws(pm)
+        for (i,gen) in nw_ref[:gen]
+            if haskey(gen, "cost")
+                if model == nothing
+                    model = gen["model"]
+                else
+                    if gen["model"] != model
+                        Memento.error(_LOGGER, "cost models are inconsistent, the typical model is $(model) however model $(gen["model"]) is given on generator $(i)")
+                    end
+                end
+            else
+                Memento.error(_LOGGER, "no cost given for generator $(i)")
+            end
+        end
+    end
+
+    return model
 end

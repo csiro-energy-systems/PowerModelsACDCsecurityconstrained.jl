@@ -52,6 +52,7 @@ module PowerModelsACDCsecurityconstrained
     include("prob/uc.jl")
     include("prob/opf.jl")  
     include("prob/opfcas_market.jl")
+    include("prob/mn_scopf_conts.jl")
   
     
     include("util/scopf_cuts_iterative.jl")
