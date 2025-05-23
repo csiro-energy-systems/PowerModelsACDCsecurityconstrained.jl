@@ -19,6 +19,28 @@ function constraint_power_balance_ac_shunt_dispatch_soft(pm::_PM.AbstractACPMode
     JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2 + sum(bs_var[s] for s in bus_shunts_var)*vm^2)
 end
 
+function constraint_power_balance_ac_shunt_strg_dispatch_soft(pm::_PM.AbstractACPModel, n::Int,i::Int, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_storage, bus_convs_ac, bus_loads, bus_shunts, bus_shunts_var, pd, qd, gs, bs)
+    vm = _PM.var(pm, n,  :vm, i)
+    p = _PM.var(pm, n,  :p)
+    q = _PM.var(pm, n,  :q)
+    pg = _PM.var(pm, n,  :pg)
+    qg = _PM.var(pm, n,  :qg)
+    ps = _PM.var(pm, n,  :ps)
+    qs =_PM.var(pm, n,  :qs)
+    pconv_grid_ac = _PM.var(pm, n,  :pconv_tf_fr)
+    qconv_grid_ac = _PM.var(pm, n,  :qconv_tf_fr)
+
+    pb_ac_pos_vio = _PM.var(pm, n, :pb_ac_pos_vio, i)
+    qb_ac_pos_vio = _PM.var(pm, n, :qb_ac_pos_vio, i)
+    pb_ac_neg_vio = _PM.var(pm, n, :pb_ac_neg_vio, i)
+    qb_ac_neg_vio = _PM.var(pm, n, :qb_ac_neg_vio, i)
+
+    bs_var = get(_PM.var(pm, n), :bs, Dict()); #_PM._check_var_keys(bs, bus_shunts_var, "reactive power", "shunt")
+
+    JuMP.@NLconstraint(pm.model, pb_ac_pos_vio - pb_ac_neg_vio  + sum(p[a] for a in bus_arcs) + sum(pconv_grid_ac[c] for c in bus_convs_ac)  == sum(pg[g] for g in bus_gens) - sum(ps[s] for s in bus_storage) - sum(pd[d] for d in bus_loads) - sum(gs[s] for s in bus_shunts)*vm^2)
+    JuMP.@NLconstraint(pm.model, qb_ac_pos_vio - qb_ac_neg_vio + sum(q[a] for a in bus_arcs) + sum(qconv_grid_ac[c] for c in bus_convs_ac)  == sum(qg[g] for g in bus_gens)  - sum(qs[s] for s in bus_storage) - sum(qd[d] for d in bus_loads) + sum(bs[s] for s in bus_shunts)*vm^2 + sum(bs_var[s] for s in bus_shunts_var)*vm^2)
+end
+
 function constraint_power_balance_ac_shunt_dispatch(pm::_PM.AbstractACPModel, n::Int,i::Int, bus, bus_arcs, bus_arcs_dc, bus_gens, bus_convs_ac, bus_loads, bus_shunts, bus_shunts_var, pd, qd, gs, bs)
     vm = _PM.var(pm, n,  :vm, i)
     p = _PM.var(pm, n,  :p)
@@ -663,8 +685,8 @@ function constraint_gen_power_reactive_response_milp(pm::_PM.AbstractACPModel, n
     qg = _PM.var(pm, :qg, gen_id, nw=n_2)
     qgub = JuMP.upper_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
     qglb = JuMP.lower_bound(_PM.var(pm, :qg, gen_id, nw=n_1))
-    xq_u = _PM.var(pm, :xp_u, i, nw=n_2)
-    xq_l = _PM.var(pm, :xp_l, i, nw=n_2)
+    xq_u = _PM.var(pm, :xp_u, gen_id, nw=n_2)
+    xq_l = _PM.var(pm, :xp_l, gen_id, nw=n_2)
     bigM_u = 1E3
     bigM_l = 1E3
     
@@ -1117,4 +1139,33 @@ function constraint_fcas_target(pm::_PM.AbstractPowerModel, service::FCASService
             ==
             fcas_target["p"])
     end
+end
+
+
+function constraint_generator_ramping(pm::_PM.AbstractPowerModel, n::Int, i::Int, prev_hour, ΔPg_up, ΔPg_down)
+    pg_n = _PM.var(pm, n, :pg, i)
+    pg_n_1 = _PM.var(pm, prev_hour, :pg, i)
+
+    JuMP.@constraint(pm.model, pg_n - pg_n_1 <= ΔPg_up)
+    JuMP.@constraint(pm.model, pg_n_1 - pg_n <= ΔPg_down)
+end
+
+
+
+
+function constraint_storage_power_real_link(pm::_PM.AbstractPowerModel, n_1::Int, n_2::Int, i::Int)
+    ps_1 = _PM.var(pm, n_1, :ps, i)
+    ps_2 = _PM.var(pm, n_2, :ps, i)
+
+    JuMP.@constraint(pm.model, ps_1 == ps_2)
+end
+
+
+""
+function constraint_storage_power_real_response(pm::_PM.AbstractPowerModel, nw_1::Int, nw_2::Int, i::Int, alpha)
+    ps_base = _PM.var(pm, :ps, i, nw=nw_1)
+    ps = _PM.var(pm, :ps, i, nw=nw_2)
+    delta = _PM.var(pm, :delta, nw=nw_2)
+
+    JuMP.@constraint(pm.model, ps == ps_base + alpha*delta)
 end

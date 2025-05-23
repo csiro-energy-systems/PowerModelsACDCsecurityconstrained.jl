@@ -95,7 +95,7 @@ function plot_fcas(data)
             end
 
             relayout!(fig, 
-                title_text=fcas_name(service)
+                title_text=fcas_name(service), template=:plotly_white
             )
 
             display(fig)
@@ -186,7 +186,7 @@ function plot_fcas(data)
             end
 
             relayout!(fig, 
-                title_text=fcas_name(service)
+                title_text=fcas_name(service), template=:plotly_white
             )
 
             display(fig)

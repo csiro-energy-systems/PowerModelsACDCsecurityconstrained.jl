@@ -2762,3 +2762,181 @@ function solution_processor(pm::_PM.AbstractPowerModel, solution::Dict{String, A
     # solution["lambda9"] = JuMP.value(JuMP.variable_by_name(pm.model, "0_2_pg_cost_lambda[9]"))
     # solution["lambda10"] = JuMP.value(JuMP.variable_by_name(pm.model, "0_2_pg_cost_lambda[10]"))
 end
+
+
+
+# time-series scopf multinetwork 
+function build_mn_scopf_acdc_multinetwork(network::Dict{String,<:Any})         
+    if _IM.ismultinetwork(network)
+        error(_LOGGER, "build_mn_scopf_acdc_multinetwork can only be used on single networks")
+    end
+    hours = network["hours"]
+    base_network = deepcopy(network)
+    number_of_hours = length(hours)
+    number_of_contingencies = length(network["gen_contingencies"]) + length(network["branch_contingencies"]) + length(network["branchdc_contingencies"]) + length(network["convdc_contingencies"])   
+    # This for loop determines which "network" belongs to an hour, and which to a contingency, for book-keeping of the network ids
+    # Format: [h1, c1 ... cn, h2, c1 ... cn, .... , hn, c1 ... cn]
+    hour_ids = Int[]
+    cont_ids = Int[]
+    
+    for h in 1:number_of_hours
+        push!(hour_ids, (h - 1) * (number_of_contingencies + 1) + 1)  
+        for c in 1:number_of_contingencies
+            push!(cont_ids, (h - 1) * (number_of_contingencies + 1) + c + 1)
+        end
+    end
+
+    mn_data = _IM.replicate(network, (number_of_hours * number_of_contingencies) + number_of_hours, Set{String}(["source_type", "name", "source_version", "per_unit"]))
+    mn_data["hour_ids"] = hour_ids
+    mn_data["cont_ids"] = cont_ids
+    mn_data["number_of_hours"] = number_of_hours
+    mn_data["number_of_contingencies"] = number_of_contingencies
+    # mapping cont to hour
+    mn_data["cont_hour_id"] = Dict(c => hour_ids[i] for (i, h) in enumerate(hour_ids) for c in cont_ids[(i - 1) * length(cont_ids) ÷ length(hour_ids) + 1 : i * length(cont_ids) ÷ length(hour_ids)])
+
+    _PMSC.info(_LOGGER, "building scopf multi-network with $((number_of_hours * number_of_contingencies) + number_of_hours) networks")
+
+    # contingencies and time series update
+    for (i, idx) in enumerate(hour_ids)
+        idx_nw_ids = idx:(idx+number_of_contingencies)  # include hx, c1, ... cn
+
+        for nw in idx_nw_ids 
+            for (l, load) in mn_data["nw"]["$nw"]["load"]
+                if haskey(load, "load_series")
+                    q_ratio = base_network["load"][l]["qd"] / base_network["load"][l]["pd"]
+                    load["pd"] = base_network["load"][l]["load_series"][i] * base_network["load"][l]["pd"]  
+                    load["qd"] = q_ratio * load["pd"] 
+                end
+            end
+            for (g, gen) in mn_data["nw"]["$nw"]["gen"]
+                if haskey(gen, "gen_series")
+                    q_ratio = base_network["gen"][g]["qmax"] / base_network["gen"][g]["pmax"]
+                    gen["pmax"] = base_network["gen"][g]["gen_series"][i] * base_network["gen"][g]["pmax"]  
+                    gen["qmax"] = q_ratio * gen["pmax"] 
+                end
+            end
+        end
+        
+        network_id = idx + 1
+        for cont in base_network["gen_contingencies"]
+            cont_nw = mn_data["nw"]["$(network_id)"]
+            cont_nw["name"] = cont.label
+            cont_gen = cont_nw["gen"]["$(cont.idx)"]
+            cont_gen["gen_status"] = 0
+
+            gen_buses = Set{Int}()
+            for (i,gen) in cont_nw["gen"]
+                if gen["gen_status"] != 0
+                    push!(gen_buses, gen["gen_bus"])
+                end
+            end
+            cont_nw["gen_buses"] = gen_buses
+
+            network["response_gens"] = Set()
+            gen_bus = cont_nw["bus"]["$(cont_gen["gen_bus"])"]
+            cont_nw["response_gens"] = cont_nw["area_gens"][gen_bus["area"]]
+
+            network_id += 1
+        end
+        
+        for cont in base_network["branch_contingencies"]
+            cont_nw = mn_data["nw"]["$(network_id)"]
+            cont_nw["name"] = cont.label
+            cont_branch = cont_nw["branch"]["$(cont.idx)"]
+            cont_branch["br_status"] = 0
+
+            gen_buses = Set{Int}()
+            for (i,gen) in cont_nw["gen"]
+                if gen["gen_status"] != 0
+                    push!(gen_buses, gen["gen_bus"])
+                end
+            end
+            cont_nw["gen_buses"] = gen_buses
+
+            fr_bus = cont_nw["bus"]["$(cont_branch["f_bus"])"]
+            to_bus = cont_nw["bus"]["$(cont_branch["t_bus"])"]
+
+            cont_nw["response_gens"] = Set()
+            if haskey(cont_nw["area_gens"], fr_bus["area"])
+                cont_nw["response_gens"] = cont_nw["area_gens"][fr_bus["area"]]
+            end
+            if haskey(network["area_gens"], to_bus["area"])
+                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][to_bus["area"]])
+            end
+
+            network_id += 1
+        end
+
+        for cont in base_network["branchdc_contingencies"]         
+            cont_nw = mn_data["nw"]["$(network_id)"]
+            cont_nw["name"] = cont.label
+            cont_branchdc = cont_nw["branchdc"]["$(cont.idx)"]        
+            cont_branchdc["status"] = 0                                 
+
+            gen_buses = Set{Int}()
+            for (i,gen) in cont_nw["gen"]
+                if gen["gen_status"] != 0
+                    push!(gen_buses, gen["gen_bus"])
+                end
+            end
+            cont_nw["gen_buses"] = gen_buses
+
+            fr_busdc = cont_nw["busdc"]["$(cont_branchdc["fbusdc"])"]          
+            to_busdc = cont_nw["busdc"]["$(cont_branchdc["tbusdc"])"]          
+
+            cont_nw["response_gens"] = Set()
+            if haskey(cont_nw["area_gens"], fr_busdc["area"])                          
+                cont_nw["response_gens"] = cont_nw["area_gens"][fr_busdc["area"]]       
+            end
+            if haskey(network["area_gens"], to_busdc["area"])                           
+                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][to_busdc["area"]])         
+            end
+
+            network_id += 1
+        end
+
+        for cont in base_network["convdc_contingencies"]         
+            cont_nw = mn_data["nw"]["$(network_id)"]
+            cont_nw["name"] = cont.label
+            cont_convdc = cont_nw["convdc"]["$(cont.idx)"]        
+            cont_convdc["status"] = 0                                 
+
+            gen_buses = Set{Int}()
+            for (i,gen) in cont_nw["gen"]
+                if gen["gen_status"] != 0
+                    push!(gen_buses, gen["gen_bus"])
+                end
+            end
+            cont_nw["gen_buses"] = gen_buses
+
+            busac = cont_nw["bus"]["$(cont_convdc["busac_i"])"]          
+            busdc = cont_nw["busdc"]["$(cont_convdc["busdc_i"])"]          
+
+            cont_nw["response_gens"] = Set()
+            if haskey(cont_nw["area_gens"], busac["area"])                          
+                cont_nw["response_gens"] = cont_nw["area_gens"][busac["area"]]       
+            end
+            if haskey(network["area_gens"], busdc["area"])                           
+                cont_nw["response_gens"] = union(cont_nw["response_gens"], cont_nw["area_gens"][busdc["area"]])         
+            end
+
+            network_id += 1
+        end
+
+    end
+
+    return mn_data
+end
+
+
+function get_previous_hour_network_id(pm::_PM.AbstractPowerModel, nw::Int)
+    number_of_contingencies = pm.ref[:it][:pm][:number_of_contingencies]
+
+    if number_of_contingencies == 0
+        previous_hour_network_id = Int(nw - 1)
+    else
+        previous_hour_network_id = Int(nw - 1 - number_of_contingencies)
+    end
+
+    return previous_hour_network_id
+end

@@ -47,7 +47,9 @@ function plot_losses(dc_data, ac_data)
             gridcolor="lightgray")
     )
 
-    plot(trace, layout)
+    fig = plot(trace, layout)
+    relayout!(fig, template=:plotly_white)
+    display(fig)
 end
 
 function plot_prices(dc_data, ac_data)
