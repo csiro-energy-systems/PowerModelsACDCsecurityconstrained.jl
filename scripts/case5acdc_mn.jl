@@ -51,7 +51,7 @@ data["storage"]["2"]["alpha"] = 3.5
 # updating gen 2 time_series, assuming it's a renewable generator for 2 steps
 data["gen"]["2"]["gen_series"] = [0.8 0.9 0.9 0.95 1.0 1.1]
 
-# updateing load 3 time_series for 2 steps
+# updating load 3 time_series for 2 steps
 data["load"]["3"]["load_series"] = [0.9 0.95 0.95 0.98 1.0 1.1]
 
 # similarly update time series for other renewable genrators and for their costs do it explicitly in script
