@@ -48,7 +48,7 @@ end
 data["storage"]["1"]["alpha"] = 3.5
 data["storage"]["2"]["alpha"] = 3.5
 
-# updateing gen 2 time_series assuming its a renewable generator for 2 steps
+# updating gen 2 time_series, assuming it's a renewable generator for 2 steps
 data["gen"]["2"]["gen_series"] = [0.8 0.9 0.9 0.95 1.0 1.1]
 
 # updateing load 3 time_series for 2 steps
