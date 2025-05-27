@@ -47,9 +47,9 @@ Distributed.addprocs(node_processes, topology=:master_worker)
     const _IS = IterativeSolvers
 
     # include helper functions
-    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/core/distributed.jl")
-    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/util/ndc_filter.jl")
-    include("C:/Users/moh050/OneDrive - CSIRO/Documents/Local/PowerModelsACDCsecurityconstrained/src/util/contingency_filter.jl")
+    include("../core/distributed.jl")
+    include("../util/ndc_filter.jl")
+    include("../util/contingency_filter.jl")
     
     # suppress warn and info from other packages
     _PMSCACDC.silence()

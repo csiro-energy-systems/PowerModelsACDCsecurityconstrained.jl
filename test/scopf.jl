@@ -1,6 +1,6 @@
 
 
-file = "./test/data/matpower/case5_acdc_scopf.m"
+file = "./data/matpower/case5_acdc_scopf.m"
 data = _PM.parse_file(file)
 PowerModelsACDCsecurityconstrained.fix_scopf_data_case5_acdc!(data)
 PowerModelsACDC.process_additional_data!(data)
