@@ -43,7 +43,7 @@ Make sure that your Julia registry is up to date. To detect and download the lat
 ```
 
 
-## SCOPF implimentations
+## SCOPF implementations
 
 PMACDCsc provides several SCOPF formulations conforming to the ARPA-e GOC Challenge 1 specifications extended for hybrid AC/DC grids, which are given as follows.
 
@@ -96,7 +96,7 @@ run_scopf_acdc_cuts(data, scopf_formulation, filter_formulation, run_acdc_scopf_
 
 Several scripts are provided to showcase how effectively PMACDCsc solves the real-world research problems:
 
-* The `scripts` directory provides differnt test case examples of SCOPF implimentations.
+* The `scripts` directory provides differnt test case examples of SCOPF implementations.
 * The `src/nem` directory provides the AC/DC SCOPF huiristic for the Australian National Electricity Market (NEM). 
 * The `src/nem` directory provides the AC/DC OPFCAS for the Australian NEM. 
 * The `scripts` directory provides the MLF calculation huiristic for the Australian NEM.
